@@ -134,6 +134,15 @@ namespace Mimic.UI
             BuildCells();
         }
 
+        // Visual "being dragged" state — semitransparent so the player can see
+        // the green/red placement highlight on cells beneath the held shape.
+        public void SetCarried(bool carried, float carriedAlpha)
+        {
+            var cg = GetComponent<CanvasGroup>();
+            if (cg == null) cg = gameObject.AddComponent<CanvasGroup>();
+            cg.alpha = carried ? carriedAlpha : 1f;
+        }
+
         public void OnPointerDown(PointerEventData ev)
         {
             if (ev.button == PointerEventData.InputButton.Left)
