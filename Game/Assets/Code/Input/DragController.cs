@@ -30,10 +30,6 @@ namespace Mimic.Input
         private GridView originGrid;
         private int originX, originY;
         private Rotation originRot;
-        // Frame number when Pick happened — used to ignore the same-frame LMB press
-        // (which already fired OnPointerDown → Pick via EventSystem) so Update() doesn't
-        // treat it as an immediate Drop.
-        private int pickedFrame = -1;
         // Offset (in grid cells) from the shape's bottom-left to the cell the user clicked.
         // Keeps the originally-clicked cell of the shape stuck to the cursor during drag.
         private int pickOffsetX, pickOffsetY;
@@ -60,20 +56,19 @@ namespace Mimic.Input
             UpdateHighlight(mouseScreen);
             FollowCursor(mouseScreen);
 
-            // Same-frame LMB press = the click that picked the item up; don't process it as drop.
-            if (Time.frameCount == pickedFrame) return;
-
-            if (mouse.leftButton.wasPressedThisFrame)
+            // Standard drag&drop: Pick happens on mouse-down (via EventSystem → OnPointerDown).
+            // Drop happens on mouse-UP — release the button anywhere to commit or cancel.
+            if (mouse.leftButton.wasReleasedThisFrame)
             {
                 if (hoverGrid != null && hoverCanPlace)
                 {
                     if (VerboseLogs)
-                        Debug.Log($"[Drag] DROP click → {hoverGrid.name} cell=({hoverX},{hoverY}) rot={Held.CurrentRotation}");
+                        Debug.Log($"[Drag] DROP release → {hoverGrid.name} cell=({hoverX},{hoverY}) rot={Held.CurrentRotation}");
                     TryDropAt(hoverGrid, hoverX, hoverY);
                 }
                 else
                 {
-                    // Click in an invalid location → return the item to where it came from.
+                    // Release in an invalid location → return the item to where it came from.
                     if (VerboseLogs)
                         Debug.Log($"[Drag] DROP invalid → return to origin (hover={(hoverGrid != null ? hoverGrid.name : "none")} canPlace={hoverCanPlace})");
                     Cancel();
@@ -81,6 +76,7 @@ namespace Mimic.Input
             }
             else if (mouse.rightButton.wasPressedThisFrame)
             {
+                // RMB during hold = explicit cancel.
                 if (VerboseLogs) Debug.Log("[Drag] CANCEL via RMB");
                 Cancel();
             }
@@ -156,7 +152,6 @@ namespace Mimic.Input
             grid.Model.Remove(item);
 
             Held = item;
-            pickedFrame = Time.frameCount;
             item.SetCarried(true, CarriedAlpha);
             item.transform.SetParent(DragLayer, worldPositionStays: false);
 
