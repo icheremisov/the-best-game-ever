@@ -24,14 +24,14 @@ namespace Mimic.Input
 
         private void OnRotateCW(InputAction.CallbackContext _)
         {
-            var held = DragController.Instance?.Held;
-            if (held != null) held.Rotate(clockwise: true);
+            // Route through DragController so the pickOffset is remapped — otherwise
+            // the shape would rotate around its bottom-left pivot, not the grabbed cell.
+            DragController.Instance?.RotateHeld(clockwise: true);
         }
 
         private void OnRotateCCW(InputAction.CallbackContext _)
         {
-            var held = DragController.Instance?.Held;
-            if (held != null) held.Rotate(clockwise: false);
+            DragController.Instance?.RotateHeld(clockwise: false);
         }
     }
 }

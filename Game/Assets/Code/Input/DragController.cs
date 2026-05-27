@@ -126,6 +126,40 @@ namespace Mimic.Input
             if (Held != null) TryDropAt(grid, x, y);
         }
 
+        // Rotates the held item AND remaps pickOffset so the originally-grabbed cell
+        // stays under the cursor (instead of the shape's bottom-left pivot).
+        //
+        // 90° CW : (ox, oy) → (oy, oldCols - 1 - ox)
+        // 90° CCW: (ox, oy) → (oldRows - 1 - oy, ox)
+        // where oldCols/oldRows are from the CURRENT rotation before this step,
+        // and offsets are in grid cells from the shape's bottom-left.
+        public void RotateHeld(bool clockwise)
+        {
+            if (Held == null) return;
+
+            var oldCells = Held.Shape.GetRotatedCells(Held.CurrentRotation);
+            int oldRows = oldCells.GetLength(0);
+            int oldCols = oldCells.GetLength(1);
+            int ox = pickOffsetX;
+            int oy = pickOffsetY;
+
+            Held.Rotate(clockwise);
+
+            if (clockwise)
+            {
+                pickOffsetX = oy;
+                pickOffsetY = oldCols - 1 - ox;
+            }
+            else
+            {
+                pickOffsetX = oldRows - 1 - oy;
+                pickOffsetY = ox;
+            }
+
+            if (VerboseLogs)
+                Debug.Log($"[Drag] ROTATE {(clockwise ? "CW" : "CCW")} → pickOffset=({pickOffsetX},{pickOffsetY}) rot={Held.CurrentRotation}");
+        }
+
         public void Pick(LootView item)
         {
             var grid = FindGridContaining(item);
