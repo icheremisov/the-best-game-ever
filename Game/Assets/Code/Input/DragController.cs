@@ -71,9 +71,12 @@ namespace Mimic.Input
                         Debug.Log($"[Drag] DROP click → {hoverGrid.name} cell=({hoverX},{hoverY}) rot={Held.CurrentRotation}");
                     TryDropAt(hoverGrid, hoverX, hoverY);
                 }
-                else if (VerboseLogs)
+                else
                 {
-                    Debug.Log($"[Drag] DROP click ignored — hover={(hoverGrid != null ? hoverGrid.name : "none")} canPlace={hoverCanPlace}");
+                    // Click in an invalid location → return the item to where it came from.
+                    if (VerboseLogs)
+                        Debug.Log($"[Drag] DROP invalid → return to origin (hover={(hoverGrid != null ? hoverGrid.name : "none")} canPlace={hoverCanPlace})");
+                    Cancel();
                 }
             }
             else if (mouse.rightButton.wasPressedThisFrame)
@@ -97,9 +100,17 @@ namespace Mimic.Input
                 return;
             }
 
-            // Free-follow when cursor isn't over any grid (or placement origin is out of bounds).
+            // Free-follow: shift item so the originally-clicked cell of the shape stays
+            // exactly under the cursor (consistent with snap-to-grid behaviour).
             if (RectTransformUtility.ScreenPointToWorldPointInRectangle(DragLayer, mouseScreen, UiCamera, out var worldPos))
-                Held.transform.position = worldPos;
+            {
+                float cellSize = originGrid != null ? originGrid.CellSize : Held.CellSize;
+                float worldCellSize = cellSize * DragLayer.lossyScale.x;
+                Held.transform.position = worldPos - new Vector3(
+                    pickOffsetX * worldCellSize,
+                    pickOffsetY * worldCellSize,
+                    0);
+            }
         }
 
         public void OnLootClicked(LootView item)
@@ -211,8 +222,13 @@ namespace Mimic.Input
 
         private void UpdateHighlight(Vector2 screenPos)
         {
-            ClearHighlight();
+            // Clear last frame's highlights on the held shape itself.
+            Held.ClearAllHighlights();
             hoverGrid = null;
+
+            var cells = Held.Shape.GetRotatedCells(Held.CurrentRotation);
+            int rows = cells.GetLength(0);
+            int cols = cells.GetLength(1);
 
             var grid = ScreenOverGrid(screenPos);
             if (grid == null) return;
@@ -223,12 +239,8 @@ namespace Mimic.Input
             int placeX = cursorX - pickOffsetX;
             int placeY = cursorY - pickOffsetY;
 
-            var cells = Held.Shape.GetRotatedCells(Held.CurrentRotation);
-            int rows = cells.GetLength(0);
-            int cols = cells.GetLength(1);
-
-            // Per-cell check: each occupied shape-cell is green if its target grid-cell is
-            // both in-bounds and empty; red otherwise. allFree = whole footprint fits.
+            // Per-cell check: green if target grid-cell is in-bounds AND empty, red otherwise.
+            // Highlights are painted ON the held shape so they're visible regardless of grid alpha.
             bool allFree = true;
             for (int r = 0; r < rows; r++)
             {
@@ -240,9 +252,7 @@ namespace Mimic.Input
                     bool inBounds = gx >= 0 && gx < grid.Width && gy >= 0 && gy < grid.Height;
                     bool free = inBounds && grid.Model.GetAt(gx, gy) == null;
                     if (!free) allFree = false;
-
-                    if (inBounds)
-                        SetCellHighlight(grid, gx, gy, free ? HighlightFreeColor : HighlightBlockedColor);
+                    Held.SetCellHighlight(r, c, free ? HighlightFreeColor : HighlightBlockedColor);
                 }
             }
 
@@ -262,51 +272,7 @@ namespace Mimic.Input
 
         private void ClearHighlight()
         {
-            if (MimicGrid != null) ClearGridHighlight(MimicGrid);
-            if (AdventurerGrid != null) ClearGridHighlight(AdventurerGrid);
-        }
-
-        private void ClearGridHighlight(GridView grid)
-        {
-            if (grid.CellRects == null) return;
-            for (int x = 0; x < grid.Width; x++)
-                for (int y = 0; y < grid.Height; y++)
-                {
-                    var rt = grid.CellRects[x, y];
-                    if (rt == null) continue;
-                    var h = rt.Find("Highlight");
-                    if (h != null)
-                    {
-                        var img = h.GetComponent<UnityEngine.UI.Image>();
-                        if (img != null) img.color = new Color(0, 0, 0, 0);
-                    }
-                }
-        }
-
-        private void SetCellHighlight(GridView grid, int x, int y, Color color)
-        {
-            var rt = grid.CellRects[x, y];
-            if (rt == null) return;
-            var h = rt.Find("Highlight");
-            if (h == null)
-            {
-                // Auto-create highlight overlay if the CellPrefab didn't provide one.
-                var go = new GameObject("Highlight",
-                    typeof(RectTransform), typeof(CanvasRenderer), typeof(UnityEngine.UI.Image));
-                var hr = (RectTransform)go.transform;
-                hr.SetParent(rt, worldPositionStays: false);
-                hr.anchorMin = Vector2.zero;
-                hr.anchorMax = Vector2.one;
-                hr.offsetMin = Vector2.zero;
-                hr.offsetMax = Vector2.zero;
-                var img2 = go.GetComponent<UnityEngine.UI.Image>();
-                img2.raycastTarget = false;
-                img2.color = color;
-                return;
-            }
-            var img = h.GetComponent<UnityEngine.UI.Image>();
-            if (img == null) return;
-            img.color = color;
+            if (Held != null) Held.ClearAllHighlights();
         }
 
         private GridView ScreenOverGrid(Vector2 screenPos)
