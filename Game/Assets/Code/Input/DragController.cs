@@ -25,6 +25,10 @@ namespace Mimic.Input
         private GridView originGrid;
         private int originX, originY;
         private Rotation originRot;
+        // Frame number when Pick happened — used to ignore the same-frame LMB press
+        // (which already fired OnPointerDown → Pick via EventSystem) so Update() doesn't
+        // treat it as an immediate Drop.
+        private int pickedFrame = -1;
 
         // Last hover state computed during UpdateHighlight.
         // Drop uses this snapshot so there's no frame-lag mismatch.
@@ -47,6 +51,10 @@ namespace Mimic.Input
 
             UpdateHighlight(mouseScreen);
             FollowCursor(mouseScreen);
+
+            // Same-frame LMB press = the click that picked the item up; don't process it as drop.
+            // Without this gate the item would teleport to hover cell on the very same click.
+            if (Time.frameCount == pickedFrame) return;
 
             if (mouse.leftButton.wasPressedThisFrame)
             {
@@ -117,6 +125,7 @@ namespace Mimic.Input
             grid.Model.Remove(item);
 
             Held = item;
+            pickedFrame = Time.frameCount;
             item.transform.SetParent(DragLayer, worldPositionStays: false);
 
             if (VerboseLogs)
