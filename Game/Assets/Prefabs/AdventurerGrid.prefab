@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 2975845280487522519}
   - component: {fileID: 206794427046604158}
   - component: {fileID: 5061798853259887317}
+  - component: {fileID: 4285459921070560500}
   m_Layer: 0
   m_Name: AdventurerGrid
   m_TagString: Untagged
@@ -76,6 +77,23 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &4285459921070560500
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3649096975493633724}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cedd7d0f237864d9cbfb3e457eebfdb8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Code::Mimic.UI.GridView
+  Width: 6
+  Height: 10
+  CellSize: 64
+  CellsRoot: {fileID: 7839867723236931278}
+  CellPrefab: {fileID: 3724356180963184811, guid: 90e065b9b6fad45a2a666fdc10ed0f5d, type: 3}
 --- !u!1 &8814521718937023908
 GameObject:
   m_ObjectHideFlags: 0
