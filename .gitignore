@@ -110,3 +110,7 @@ $RECYCLE.BIN/
 
 # Coplay AI runtime logs (embedded package leftover, see manifest com.coplaydev.unity-mcp)
 Game/Packages/Coplay/
+
+# MCP for Unity / playtest screenshots
+Game/Assets/Screenshots/
+Game/Assets/Screenshots.meta
