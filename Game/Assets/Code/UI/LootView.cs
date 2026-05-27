@@ -38,11 +38,21 @@ namespace Mimic.UI
             rt.anchorMin = rt.anchorMax = new Vector2(0, 0);
             rt.pivot = new Vector2(0, 0);
 
+            // The root LootItem prefab carries a solid-white Image — it shows through
+            // wherever the shape has empty (".") cells. Hide it; only the per-cell
+            // Images created in BuildCells should be visible.
+            var rootImg = GetComponent<Image>();
+            if (rootImg != null) rootImg.color = new Color(0, 0, 0, 0);
+
             if (CellsRoot != null)
             {
                 CellsRoot.anchorMin = CellsRoot.anchorMax = new Vector2(0, 0);
                 CellsRoot.pivot = new Vector2(0, 0);
                 CellsRoot.anchoredPosition = Vector2.zero;
+
+                // Same for the CellsRoot Image if it has one.
+                var cellsRootImg = CellsRoot.GetComponent<Image>();
+                if (cellsRootImg != null) cellsRootImg.color = new Color(0, 0, 0, 0);
             }
         }
 
