@@ -190,6 +190,13 @@ namespace Mimic.UI
             BuildCells();
         }
 
+        public void SetRotation(Rotation rotation)
+        {
+            if (CurrentRotation == rotation) return;
+            CurrentRotation = rotation;
+            BuildCells();
+        }
+
         // Visual "being dragged" state — semitransparent so the player can see
         // the green/red placement highlight on cells beneath the held shape.
         public void SetCarried(bool carried, float carriedAlpha)

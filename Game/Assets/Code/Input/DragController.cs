@@ -205,12 +205,15 @@ namespace Mimic.Input
         public void Cancel()
         {
             if (Held == null) return;
-            Held.CurrentRotation = originRot;
+            // SetRotation rebuilds cells so the visual matches originRot — without this
+            // the shape stays in its last drag-time rotation even though Model placed it
+            // back at originRot.
+            Held.SetRotation(originRot);
             originGrid.Model.TryPlace(Held, originX, originY, originRot);
             SnapToGrid(Held, originGrid, originX, originY);
             Held.SetCarried(false, 1f);
             if (VerboseLogs)
-                Debug.Log($"[Drag] CANCEL → returned {Held.Data?.Id} to {originGrid.name} ({originX},{originY})");
+                Debug.Log($"[Drag] CANCEL → returned {Held.Data?.Id} to {originGrid.name} ({originX},{originY}) rot={originRot}");
             Held = null;
             hoverGrid = null;
             ClearHighlight();
