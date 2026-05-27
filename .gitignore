@@ -107,3 +107,6 @@ $RECYCLE.BIN/
 # Claude / AI tooling
 # =============================================================================
 .claude/
+
+# Coplay AI runtime logs (embedded package leftover, see manifest com.coplaydev.unity-mcp)
+Game/Packages/Coplay/
