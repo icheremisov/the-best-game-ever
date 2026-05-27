@@ -214,7 +214,16 @@ namespace Mimic.UI
                 DragController.Instance?.OnLootRightClicked(this);
         }
 
-        public void OnPointerEnter(PointerEventData ev) => TooltipController.Instance?.Show(this);
-        public void OnPointerExit(PointerEventData ev) => TooltipController.Instance?.Hide();
+        public void OnPointerEnter(PointerEventData ev)
+        {
+            Debug.Log($"[LootView] OnPointerEnter {Data?.Id ?? name}");
+            TooltipController.Instance?.Show(this);
+        }
+
+        public void OnPointerExit(PointerEventData ev)
+        {
+            Debug.Log($"[LootView] OnPointerExit {Data?.Id ?? name}");
+            TooltipController.Instance?.Hide();
+        }
     }
 }
