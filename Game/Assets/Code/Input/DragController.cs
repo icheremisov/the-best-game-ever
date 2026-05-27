@@ -72,22 +72,19 @@ namespace Mimic.Input
 
         private void FollowCursor(Vector2 mouseScreen)
         {
-            // Snap-to-grid follow: if cursor is over a cell, position the held item so the
-            // shape's (0,0) cell aligns exactly with the cell under the cursor — this matches
-            // exactly where the drop will land, which fixes both the pivot offset and the
-            // "wrong position after release" issue.
+            // Snap-to-grid follow: place item so its bottom-left pivot coincides with the
+            // hovered cell's bottom-left pivot in WORLD space — this works regardless of
+            // any parent pivot/anchor weirdness in the scene hierarchy.
             if (hoverGrid != null)
             {
-                var gridLocal = hoverGrid.CellToLocal(hoverX, hoverY);
-                var worldPos = hoverGrid.CellsRoot.TransformPoint(gridLocal);
-                var dragLocal = DragLayer.InverseTransformPoint(worldPos);
-                ((RectTransform)Held.transform).anchoredPosition = dragLocal;
+                var cellRt = hoverGrid.CellRects[hoverX, hoverY];
+                Held.transform.position = cellRt.position;
                 return;
             }
 
             // Free-follow when cursor isn't over any grid.
-            if (RectTransformUtility.ScreenPointToLocalPointInRectangle(DragLayer, mouseScreen, UiCamera, out var local))
-                ((RectTransform)Held.transform).anchoredPosition = local;
+            if (RectTransformUtility.ScreenPointToWorldPointInRectangle(DragLayer, mouseScreen, UiCamera, out var worldPos))
+                Held.transform.position = worldPos;
         }
 
         public void OnLootClicked(LootView item)
@@ -273,8 +270,13 @@ namespace Mimic.Input
 
         private void SnapToGrid(LootView item, GridView grid, int x, int y)
         {
-            item.transform.SetParent(grid.CellsRoot, worldPositionStays: false);
-            ((RectTransform)item.transform).anchoredPosition = grid.CellToLocal(x, y);
+            var rt = (RectTransform)item.transform;
+            rt.SetParent(grid.CellsRoot, worldPositionStays: false);
+            rt.anchorMin = rt.anchorMax = new Vector2(0, 0);
+            rt.pivot = new Vector2(0, 0);
+            // Use world-space cell position — robust against parent pivot/anchor.
+            var cellRt = grid.CellRects[x, y];
+            rt.position = cellRt.position;
         }
     }
 }

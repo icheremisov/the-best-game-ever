@@ -25,22 +25,45 @@ namespace Mimic.UI
         public void Bind(LootData data)
         {
             Data = data;
-            if (Label != null)
-            {
-                Label.text = data.Name;
-                Label.fontSize = LabelFontSize;
-                Label.color = Color.white;
-                Label.alignment = TextAnchor.MiddleCenter;
-                Label.fontStyle = FontStyle.Bold;
-                // Outline for readability over any color
-                var outline = Label.gameObject.GetComponent<Outline>();
-                if (outline == null) outline = Label.gameObject.AddComponent<Outline>();
-                outline.effectColor = Color.black;
-                outline.effectDistance = new Vector2(2, -2);
-                // Bring label to front
-                Label.transform.SetAsLastSibling();
-            }
+            // Force layout consistency — prefab children may have inherited Unity defaults
+            // (pivot 0.5/0.5, sizeDelta 100/100) that misalign positioning math.
+            NormalizeLayout();
+            if (Label != null) ConfigureLabel(data.Name);
             BuildCells();
+        }
+
+        private void NormalizeLayout()
+        {
+            var rt = (RectTransform)transform;
+            rt.anchorMin = rt.anchorMax = new Vector2(0, 0);
+            rt.pivot = new Vector2(0, 0);
+
+            if (CellsRoot != null)
+            {
+                CellsRoot.anchorMin = CellsRoot.anchorMax = new Vector2(0, 0);
+                CellsRoot.pivot = new Vector2(0, 0);
+                CellsRoot.anchoredPosition = Vector2.zero;
+            }
+        }
+
+        private void ConfigureLabel(string text)
+        {
+            var lt = (RectTransform)Label.transform;
+            lt.anchorMin = Vector2.zero;
+            lt.anchorMax = Vector2.one;
+            lt.offsetMin = Vector2.zero;
+            lt.offsetMax = Vector2.zero;
+            Label.text = text;
+            Label.fontSize = LabelFontSize;
+            Label.color = Color.white;
+            Label.alignment = TextAnchor.MiddleCenter;
+            Label.fontStyle = FontStyle.Bold;
+            Label.raycastTarget = false;
+            var outline = Label.gameObject.GetComponent<Outline>();
+            if (outline == null) outline = Label.gameObject.AddComponent<Outline>();
+            outline.effectColor = Color.black;
+            outline.effectDistance = new Vector2(2, -2);
+            Label.transform.SetAsLastSibling();
         }
 
         private static readonly Color[] Palette =
@@ -72,9 +95,10 @@ namespace Mimic.UI
             int rows = cells.GetLength(0);
             int cols = cells.GetLength(1);
 
-            // Resize root so it occupies the right number of cells
-            ((RectTransform)transform).sizeDelta = new Vector2(cols * CellSize, rows * CellSize);
-            CellsRoot.sizeDelta = new Vector2(cols * CellSize, rows * CellSize);
+            // Root + CellsRoot get the bounding box size
+            var size = new Vector2(cols * CellSize, rows * CellSize);
+            ((RectTransform)transform).sizeDelta = size;
+            CellsRoot.sizeDelta = size;
 
             for (int r = 0; r < rows; r++)
             {
@@ -86,10 +110,14 @@ namespace Mimic.UI
                     rt.anchorMin = rt.anchorMax = new Vector2(0, 0);
                     rt.pivot = new Vector2(0, 0);
                     rt.sizeDelta = new Vector2(CellSize, CellSize);
-                    rt.anchoredPosition = new Vector2(c * CellSize, r * CellSize);
-                    // Tint the cell with item color (opaque) + add a darker outline for visibility
+                    // Pattern row 0 is visually TOP, so flip into UI Y (bottom-up) here too.
+                    rt.anchoredPosition = new Vector2(c * CellSize, (rows - 1 - r) * CellSize);
                     var img = go.GetComponent<Image>();
-                    if (img != null) img.color = color;
+                    if (img != null)
+                    {
+                        img.sprite = null;
+                        img.color = color;
+                    }
                     var outline = go.GetComponent<Outline>();
                     if (outline == null) outline = go.AddComponent<Outline>();
                     outline.effectColor = new Color(0, 0, 0, 0.8f);

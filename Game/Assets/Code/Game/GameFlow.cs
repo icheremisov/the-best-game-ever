@@ -72,7 +72,11 @@ namespace Mimic.Game
                 for (int x = 0; x < grid.Width; x++)
                     if (grid.Model.TryPlace(view, x, y, Mimic.Logic.Rotation.Deg0))
                     {
-                        ((RectTransform)view.transform).anchoredPosition = grid.CellToLocal(x, y);
+                        var rt = (RectTransform)view.transform;
+                        rt.SetParent(grid.CellsRoot, worldPositionStays: false);
+                        rt.anchorMin = rt.anchorMax = new Vector2(0, 0);
+                        rt.pivot = new Vector2(0, 0);
+                        rt.position = grid.CellRects[x, y].position;
                         return true;
                     }
             return false;
