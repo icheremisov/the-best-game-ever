@@ -24,10 +24,27 @@ namespace Mimic.Game
         {
             Instance = this;
             EnsureMainCamera();
+            EnsureRuntimeControllers();
             LootCatalog.Load();
             AdventurerCatalog.Load();
             DayConfig.Load();
             Resources.StartDay(DayConfig.Current);
+        }
+
+        // If the scene-assembly step forgot to add a controller, attach it programmatically
+        // so the corresponding feature still works (tooltip, context menu).
+        private void EnsureRuntimeControllers()
+        {
+            if (TooltipController.Instance == null)
+            {
+                gameObject.AddComponent<TooltipController>();
+                Debug.Log("[GameContext] Auto-added TooltipController");
+            }
+            if (ContextMenuController.Instance == null)
+            {
+                gameObject.AddComponent<ContextMenuController>();
+                Debug.Log("[GameContext] Auto-added ContextMenuController");
+            }
         }
 
         // Ensures a Camera exists in the scene so Unity doesn't complain
