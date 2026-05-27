@@ -27,29 +27,29 @@ namespace Mimic.Logic
         {
             var shape = GetShape(item);
             var rotated = shape.GetRotatedCells(rot);
-            int sh = rotated.GetLength(0); // rows
+            int sh = rotated.GetLength(0); // rows  (pattern row 0 = visual TOP)
             int sw = rotated.GetLength(1); // cols
 
-            // Bounds + overlap check
+            // Pattern row 0 maps to TOP of the placement footprint, so flip into UI Y
+            // (bottom-up). gy = y + (sh - 1 - r): row 0 → top, last row → bottom.
             for (int r = 0; r < sh; r++)
             {
                 for (int c = 0; c < sw; c++)
                 {
                     if (!rotated[r, c]) continue;
                     int gx = x + c;
-                    int gy = y + r;
+                    int gy = y + (sh - 1 - r);
                     if (gx < 0 || gx >= Width || gy < 0 || gy >= Height) return false;
                     if (cells[gx, gy] != null) return false;
                 }
             }
 
-            // Commit
             for (int r = 0; r < sh; r++)
             {
                 for (int c = 0; c < sw; c++)
                 {
                     if (!rotated[r, c]) continue;
-                    cells[x + c, y + r] = item;
+                    cells[x + c, y + (sh - 1 - r)] = item;
                 }
             }
             placements[item] = (x, y, rot);
@@ -67,7 +67,7 @@ namespace Mimic.Logic
                 for (int c = 0; c < sw; c++)
                 {
                     if (!rotated[r, c]) continue;
-                    cells[p.x + c, p.y + r] = null;
+                    cells[p.x + c, p.y + (sh - 1 - r)] = null;
                 }
             }
             placements.Remove(item);

@@ -27,7 +27,18 @@ namespace Mimic.UI
         {
             Model = new GridModel<LootView>(Width, Height);
             CellRects = new RectTransform[Width, Height];
+            NormalizeCellsRoot();
             BuildCells();
+        }
+
+        // Make sure CellsRoot anchors/pivot are (0,0) so cell anchoredPositions
+        // map straight to bottom-left of the grid. Prefab defaults may be wrong.
+        private void NormalizeCellsRoot()
+        {
+            if (CellsRoot == null) return;
+            CellsRoot.anchorMin = CellsRoot.anchorMax = new Vector2(0, 0);
+            CellsRoot.pivot = new Vector2(0, 0);
+            CellsRoot.sizeDelta = new Vector2(Width * CellSize, Height * CellSize);
         }
 
         private void BuildCells()
