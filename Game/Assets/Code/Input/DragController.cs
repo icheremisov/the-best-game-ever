@@ -17,11 +17,22 @@ namespace Mimic.Input
         public RectTransform DragLayer;
         public Camera UiCamera; // can be null if Canvas is ScreenSpaceOverlay
 
+        [Header("Debug")]
+        public bool VerboseLogs = true;
+
         public LootView Held { get; private set; }
 
         private GridView originGrid;
         private int originX, originY;
         private Rotation originRot;
+
+        // Last hover state computed during UpdateHighlight.
+        // Drop uses this snapshot so there's no frame-lag mismatch.
+        private GridView hoverGrid;
+        private int hoverX, hoverY;
+        private bool hoverCanPlace;
+        private int loggedHoverX = int.MinValue, loggedHoverY = int.MinValue;
+        private GridView loggedHoverGrid;
 
         private void Awake() => Instance = this;
 
@@ -34,27 +45,49 @@ namespace Mimic.Input
 
             var mouseScreen = mouse.position.ReadValue();
 
-            // Follow cursor
-            if (RectTransformUtility.ScreenPointToLocalPointInRectangle(DragLayer, mouseScreen, UiCamera, out var local))
-                ((RectTransform)Held.transform).anchoredPosition = local;
-
             UpdateHighlight(mouseScreen);
+            FollowCursor(mouseScreen);
 
-            // Click on empty cell while holding → drop there.
             if (mouse.leftButton.wasPressedThisFrame)
             {
-                var grid = ScreenOverGrid(mouseScreen);
-                if (grid != null
-                    && grid.ScreenToCell(mouseScreen, UiCamera, out int cx, out int cy)
-                    && grid.Model.GetAt(cx, cy) == null)
+                // Use the locked hover from this frame's UpdateHighlight, NOT a recomputed
+                // ScreenToCell — eliminates the 1-frame drift between highlight and drop.
+                if (hoverGrid != null && hoverCanPlace)
                 {
-                    TryDropAt(grid, cx, cy);
+                    if (VerboseLogs)
+                        Debug.Log($"[Drag] DROP click → {hoverGrid.name} cell=({hoverX},{hoverY}) rot={Held.CurrentRotation}");
+                    TryDropAt(hoverGrid, hoverX, hoverY);
+                }
+                else if (VerboseLogs)
+                {
+                    Debug.Log($"[Drag] DROP click ignored — hover={(hoverGrid != null ? hoverGrid.name : "none")} canPlace={hoverCanPlace}");
                 }
             }
             else if (mouse.rightButton.wasPressedThisFrame)
             {
+                if (VerboseLogs) Debug.Log("[Drag] CANCEL via RMB");
                 Cancel();
             }
+        }
+
+        private void FollowCursor(Vector2 mouseScreen)
+        {
+            // Snap-to-grid follow: if cursor is over a cell, position the held item so the
+            // shape's (0,0) cell aligns exactly with the cell under the cursor — this matches
+            // exactly where the drop will land, which fixes both the pivot offset and the
+            // "wrong position after release" issue.
+            if (hoverGrid != null)
+            {
+                var gridLocal = hoverGrid.CellToLocal(hoverX, hoverY);
+                var worldPos = hoverGrid.CellsRoot.TransformPoint(gridLocal);
+                var dragLocal = DragLayer.InverseTransformPoint(worldPos);
+                ((RectTransform)Held.transform).anchoredPosition = dragLocal;
+                return;
+            }
+
+            // Free-follow when cursor isn't over any grid.
+            if (RectTransformUtility.ScreenPointToLocalPointInRectangle(DragLayer, mouseScreen, UiCamera, out var local))
+                ((RectTransform)Held.transform).anchoredPosition = local;
         }
 
         public void OnLootClicked(LootView item)
@@ -71,21 +104,36 @@ namespace Mimic.Input
 
         public void OnEmptyCellClicked(GridView grid, int x, int y)
         {
-            // Called from GridView click handler — see Task 4.4
             if (Held != null) TryDropAt(grid, x, y);
         }
 
         public void Pick(LootView item)
         {
-            // Determine origin grid + remove from model
             var grid = FindGridContaining(item);
-            if (grid == null) return; // Already in DragLayer somehow
+            if (grid == null)
+            {
+                if (VerboseLogs) Debug.LogWarning($"[Drag] Pick failed — {item.name} not in any grid model");
+                return;
+            }
             grid.Model.TryGetPlacement(item, out originX, out originY, out originRot);
             originGrid = grid;
             grid.Model.Remove(item);
 
             Held = item;
             item.transform.SetParent(DragLayer, worldPositionStays: false);
+
+            if (VerboseLogs)
+                Debug.Log($"[Drag] PICK {item.Data?.Id ?? item.name} from {grid.name} at ({originX},{originY}) rot={originRot}");
+
+            // Force immediate position update so the picked item appears under the cursor
+            // on the same frame, not next-frame.
+            var mouse = Mouse.current;
+            if (mouse != null)
+            {
+                var ms = mouse.position.ReadValue();
+                UpdateHighlight(ms);
+                FollowCursor(ms);
+            }
         }
 
         public void Cancel()
@@ -94,13 +142,16 @@ namespace Mimic.Input
             Held.CurrentRotation = originRot;
             originGrid.Model.TryPlace(Held, originX, originY, originRot);
             SnapToGrid(Held, originGrid, originX, originY);
+            if (VerboseLogs)
+                Debug.Log($"[Drag] CANCEL → returned {Held.Data?.Id} to {originGrid.name} ({originX},{originY})");
             Held = null;
+            hoverGrid = null;
             ClearHighlight();
         }
 
         private void TryDrop(LootView clickedItem)
         {
-            // Если кликнули по другому item — попытка положить на его клетку
+            // Click hit another item — drop onto its origin cell.
             var grid = FindGridContaining(clickedItem);
             if (grid != null)
             {
@@ -111,31 +162,57 @@ namespace Mimic.Input
 
         private void TryDropAt(GridView grid, int x, int y)
         {
-            // MVP rule: items cannot return to adventurer grid
-            if (grid == AdventurerGrid && originGrid == MimicGrid) return;
+            if (grid == AdventurerGrid && originGrid == MimicGrid)
+            {
+                if (VerboseLogs) Debug.Log("[Drag] DROP rejected — can't move from mimic to adventurer grid");
+                return;
+            }
 
             if (grid.Model.TryPlace(Held, x, y, Held.CurrentRotation))
             {
                 Held.transform.SetParent(grid.CellsRoot, worldPositionStays: false);
                 SnapToGrid(Held, grid, x, y);
+                if (VerboseLogs)
+                    Debug.Log($"[Drag] DROP OK → {grid.name} ({x},{y}) rot={Held.CurrentRotation}");
                 Held = null;
+                hoverGrid = null;
                 ClearHighlight();
                 GameContext.Instance?.OnGridChanged();
+            }
+            else
+            {
+                if (VerboseLogs)
+                    Debug.LogWarning($"[Drag] TryPlace failed at {grid.name} ({x},{y}) rot={Held.CurrentRotation}");
             }
         }
 
         private void UpdateHighlight(Vector2 screenPos)
         {
             ClearHighlight();
-            // Determine which grid the cursor is over
+            hoverGrid = null;
+
             var grid = ScreenOverGrid(screenPos);
             if (grid == null) return;
             if (!grid.ScreenToCell(screenPos, UiCamera, out int x, out int y)) return;
 
-            var cells = Held.Shape.GetRotatedCells(Held.CurrentRotation);
             bool canPlace = grid.Model.TryPlace(Held, x, y, Held.CurrentRotation);
-            if (canPlace) grid.Model.Remove(Held); // undo trial placement
+            if (canPlace) grid.Model.Remove(Held);
 
+            hoverGrid = grid;
+            hoverX = x;
+            hoverY = y;
+            hoverCanPlace = canPlace;
+
+            // Log only when hover cell or grid changes — avoids spamming every frame.
+            if (VerboseLogs && (loggedHoverGrid != grid || loggedHoverX != x || loggedHoverY != y))
+            {
+                Debug.Log($"[Drag] HOVER {grid.name} cell=({x},{y}) canPlace={canPlace} screenPos={screenPos}");
+                loggedHoverGrid = grid;
+                loggedHoverX = x;
+                loggedHoverY = y;
+            }
+
+            var cells = Held.Shape.GetRotatedCells(Held.CurrentRotation);
             int rows = cells.GetLength(0);
             int cols = cells.GetLength(1);
             for (int r = 0; r < rows; r++)
