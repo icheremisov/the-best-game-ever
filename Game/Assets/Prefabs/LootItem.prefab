@@ -46,6 +46,7 @@ GameObject:
   - component: {fileID: 1018195042807182299}
   - component: {fileID: 2901427903099240658}
   - component: {fileID: 3877971718133474545}
+  - component: {fileID: 4086780996342773749}
   m_Layer: 0
   m_Name: LootItem
   m_TagString: Untagged
@@ -96,7 +97,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_RaycastTarget: 1
+  m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
@@ -112,6 +113,22 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &4086780996342773749
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4677224677143336201}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8d0cea4b7f5164c449f1da0fef8a91b8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Code::Mimic.UI.LootView
+  CurrentRotation: 0
+  CellsRoot: {fileID: 1572553379278837328}
+  CellPrefab: {fileID: 3724356180963184811, guid: 90e065b9b6fad45a2a666fdc10ed0f5d, type: 3}
+  Label: {fileID: 9200075109623238840}
 --- !u!1 &5808424363626394424
 GameObject:
   m_ObjectHideFlags: 0
