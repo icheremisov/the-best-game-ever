@@ -19,6 +19,7 @@ namespace Mimic.UI
         public Text AcidText;
         public Text AdjacencyText;
         public Camera UiCamera;
+        public Canvas HostCanvas; // parent for auto-created Panel
 
         [Header("Style")]
         public Vector2 CursorOffset = new Vector2(24, 24);
@@ -29,23 +30,57 @@ namespace Mimic.UI
         public Color BoostColor = new Color(0.45f, 0.95f, 0.45f, 1f);
         public Color PenaltyColor = new Color(0.95f, 0.45f, 0.45f, 1f);
 
+        [Header("Debug")]
+        public bool VerboseLogs = false;
+
         private void Awake()
         {
             Instance = this;
+            EnsurePanel();
             EnsureLayout();
             if (Panel != null) Panel.gameObject.SetActive(false);
         }
 
-        // Ensures the tooltip Panel has the expected child Text fields. If the
-        // prefab didn't wire them up (or has bad pivots), this fixes it at runtime.
+        // If the prefab reference wasn't set or the Panel disappeared, build one
+        // programmatically under the main Canvas so the tooltip always has somewhere to live.
+        private void EnsurePanel()
+        {
+            if (Panel != null) return;
+
+            if (HostCanvas == null) HostCanvas = FindObjectOfType<Canvas>();
+            if (HostCanvas == null)
+            {
+                Debug.LogWarning("[Tooltip] No Canvas in scene — tooltip won't render");
+                return;
+            }
+
+            var go = new GameObject("TooltipPanel_Auto",
+                typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            go.transform.SetParent(HostCanvas.transform, worldPositionStays: false);
+            var rt = (RectTransform)go.transform;
+            rt.anchorMin = rt.anchorMax = new Vector2(0, 0);
+            rt.pivot = new Vector2(0, 1);
+            rt.sizeDelta = new Vector2(280, 160);
+            var img = go.GetComponent<Image>();
+            img.color = new Color(0.05f, 0.05f, 0.10f, 0.92f);
+            img.raycastTarget = false;
+            Panel = rt;
+            // Make sure it draws above everything in the canvas
+            Panel.SetAsLastSibling();
+            if (VerboseLogs) Debug.Log("[Tooltip] Auto-created Panel under " + HostCanvas.name);
+        }
+
+        // Ensures the tooltip Panel has the expected child Text fields and pivot.
         private void EnsureLayout()
         {
             if (Panel == null) return;
-            Panel.pivot = new Vector2(0, 1); // top-left so OffsetX/Y go down-right from cursor
+            Panel.pivot = new Vector2(0, 1);
             var bg = Panel.GetComponent<Image>();
-            if (bg != null && bg.color.a < 0.1f) bg.color = new Color(0.05f, 0.05f, 0.10f, 0.92f);
-            // Make background non-blocking so hovered item still receives events
-            if (bg != null) bg.raycastTarget = false;
+            if (bg != null)
+            {
+                if (bg.color.a < 0.1f) bg.color = new Color(0.05f, 0.05f, 0.10f, 0.92f);
+                bg.raycastTarget = false;
+            }
 
             NameText        = NameText        != null ? NameText        : CreateText("NameText",        NameFontSize,        FontStyle.Bold);
             DescriptionText = DescriptionText != null ? DescriptionText : CreateText("DescriptionText", DescriptionFontSize, FontStyle.Italic);
@@ -53,8 +88,6 @@ namespace Mimic.UI
             AcidText        = AcidText        != null ? AcidText        : CreateText("AcidText",        StatFontSize,        FontStyle.Normal);
             AdjacencyText   = AdjacencyText   != null ? AdjacencyText   : CreateText("AdjacencyText",   AdjacencyFontSize,   FontStyle.Normal);
 
-            // Use a VerticalLayoutGroup if Panel doesn't already manage layout — keeps
-            // the text rows stacked even with auto-created children.
             if (Panel.GetComponent<LayoutGroup>() == null)
             {
                 var vlg = Panel.gameObject.AddComponent<VerticalLayoutGroup>();
@@ -73,7 +106,6 @@ namespace Mimic.UI
                 csf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             }
 
-            // Ensure all texts are children of Panel and in the right order.
             EnforceParent(NameText);
             EnforceParent(DescriptionText);
             EnforceParent(GoldText);
@@ -94,6 +126,7 @@ namespace Mimic.UI
             t.horizontalOverflow = HorizontalWrapMode.Overflow;
             t.verticalOverflow = VerticalWrapMode.Overflow;
             t.raycastTarget = false;
+            t.supportRichText = true;
             t.font = t.font ?? Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             return t;
         }
@@ -116,8 +149,16 @@ namespace Mimic.UI
 
         public void Show(LootView item)
         {
-            if (Panel == null || item == null || item.Data == null) return;
+            if (item == null || item.Data == null) return;
+            if (Panel == null) { EnsurePanel(); EnsureLayout(); }
+            if (Panel == null)
+            {
+                if (VerboseLogs) Debug.LogWarning("[Tooltip] Panel still null after EnsurePanel — cannot show");
+                return;
+            }
+
             Panel.gameObject.SetActive(true);
+            Panel.SetAsLastSibling(); // draw above other UI
 
             var data = item.Data;
             NameText.text = data.Name;
@@ -149,15 +190,16 @@ namespace Mimic.UI
                 AdjacencyText.text = (active ? "✓ " : "○ ") + adjacencyDesc;
                 AdjacencyText.color = active ? BoostColor : Color.gray;
             }
+
+            if (VerboseLogs) Debug.Log($"[Tooltip] Show {data.Id} (inMimic={inMimic})");
         }
 
         private string FormatStat(string label, int baseVal, int effective, string unit, bool betterIsHigher)
         {
             if (baseVal == effective) return $"{label}: {baseVal} {unit}";
-            // Color the effective value based on direction
             bool boost = betterIsHigher ? (effective > baseVal) : (effective < baseVal);
             string color = ColorUtility.ToHtmlStringRGB(boost ? BoostColor : PenaltyColor);
-            return $"{label}: <color=#{color}>{effective}</color> {unit} <color=#888>(база {baseVal})</color>";
+            return $"{label}: <color=#{color}>{effective}</color> {unit} <color=#888888>(база {baseVal})</color>";
         }
 
         private string DescribeAdjacency(LootData data)
@@ -194,8 +236,6 @@ namespace Mimic.UI
 
         private static bool AdjacencyActive(LootView item)
         {
-            // Adjacency is active when LastResolved boosted/reduced the value
-            // relative to base. Crude but correct without exposing the resolver internals.
             var resolved = GameContext.Instance?.LastResolved;
             if (resolved == null) return false;
             int g = resolved.GetGold(item);
