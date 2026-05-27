@@ -42,7 +42,17 @@ namespace Mimic.Input
         private int loggedHoverX = int.MinValue, loggedHoverY = int.MinValue;
         private GridView loggedHoverGrid;
 
-        private void Awake() => Instance = this;
+        private void Awake()
+        {
+            Instance = this;
+            // Force DragLayer to not block pointer events — otherwise OnPointerEnter
+            // never fires on the items underneath (tooltip silently dies).
+            if (DragLayer != null)
+            {
+                var img = DragLayer.GetComponent<UnityEngine.UI.Image>();
+                if (img != null) img.raycastTarget = false;
+            }
+        }
 
         private void Update()
         {
@@ -214,9 +224,9 @@ namespace Mimic.Input
             Held.SetCarried(false, 1f);
             if (VerboseLogs)
                 Debug.Log($"[Drag] CANCEL → returned {Held.Data?.Id} to {originGrid.name} ({originX},{originY}) rot={originRot}");
+            Held.ClearAllHighlights();
             Held = null;
             hoverGrid = null;
-            ClearHighlight();
         }
 
         private void TryDrop(LootView clickedItem)
@@ -240,9 +250,9 @@ namespace Mimic.Input
                 Held.SetCarried(false, 1f);
                 if (VerboseLogs)
                     Debug.Log($"[Drag] DROP OK → {grid.name} ({x},{y}) rot={Held.CurrentRotation}");
+                Held.ClearAllHighlights(); // clear shape-cell tints BEFORE losing the reference
                 Held = null;
                 hoverGrid = null;
-                ClearHighlight();
                 GameContext.Instance?.OnGridChanged();
             }
             else
