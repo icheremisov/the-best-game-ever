@@ -34,6 +34,25 @@ namespace Mimic.Input
                 ((RectTransform)Held.transform).anchoredPosition = local;
 
             UpdateHighlight(mouseScreen);
+
+            // Click on empty cell while holding → drop there.
+            // LootView's IPointerDownHandler captures clicks on existing items first
+            // (handled by OnLootClicked); this branch fires only when the click missed any item.
+            if (UnityEngine.Input.GetMouseButtonDown(0))
+            {
+                var grid = ScreenOverGrid(mouseScreen);
+                if (grid != null
+                    && grid.ScreenToCell(mouseScreen, UiCamera, out int cx, out int cy)
+                    && grid.Model.GetAt(cx, cy) == null)
+                {
+                    TryDropAt(grid, cx, cy);
+                }
+            }
+            else if (UnityEngine.Input.GetMouseButtonDown(1))
+            {
+                // Right-click anywhere while holding → cancel
+                Cancel();
+            }
         }
 
         public void OnLootClicked(LootView item)
