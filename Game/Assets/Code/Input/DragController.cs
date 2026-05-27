@@ -17,6 +17,11 @@ namespace Mimic.Input
         public RectTransform DragLayer;
         public Camera UiCamera; // can be null if Canvas is ScreenSpaceOverlay
 
+        [Header("Style")]
+        public float CarriedAlpha = 0.5f;
+        public Color HighlightFreeColor = new Color(0.30f, 0.85f, 0.30f, 0.65f);
+        public Color HighlightBlockedColor = new Color(0.85f, 0.20f, 0.20f, 0.65f);
+
         [Header("Debug")]
         public bool VerboseLogs = true;
 
@@ -29,11 +34,14 @@ namespace Mimic.Input
         // (which already fired OnPointerDown → Pick via EventSystem) so Update() doesn't
         // treat it as an immediate Drop.
         private int pickedFrame = -1;
+        // Offset (in grid cells) from the shape's bottom-left to the cell the user clicked.
+        // Keeps the originally-clicked cell of the shape stuck to the cursor during drag.
+        private int pickOffsetX, pickOffsetY;
 
         // Last hover state computed during UpdateHighlight.
         // Drop uses this snapshot so there's no frame-lag mismatch.
         private GridView hoverGrid;
-        private int hoverX, hoverY;
+        private int hoverX, hoverY; // placement origin (bottom-left), with pick offset already applied
         private bool hoverCanPlace;
         private int loggedHoverX = int.MinValue, loggedHoverY = int.MinValue;
         private GridView loggedHoverGrid;
@@ -53,13 +61,10 @@ namespace Mimic.Input
             FollowCursor(mouseScreen);
 
             // Same-frame LMB press = the click that picked the item up; don't process it as drop.
-            // Without this gate the item would teleport to hover cell on the very same click.
             if (Time.frameCount == pickedFrame) return;
 
             if (mouse.leftButton.wasPressedThisFrame)
             {
-                // Use the locked hover from this frame's UpdateHighlight, NOT a recomputed
-                // ScreenToCell — eliminates the 1-frame drift between highlight and drop.
                 if (hoverGrid != null && hoverCanPlace)
                 {
                     if (VerboseLogs)
@@ -80,17 +85,19 @@ namespace Mimic.Input
 
         private void FollowCursor(Vector2 mouseScreen)
         {
-            // Snap-to-grid follow: place item so its bottom-left pivot coincides with the
-            // hovered cell's bottom-left pivot in WORLD space — this works regardless of
-            // any parent pivot/anchor weirdness in the scene hierarchy.
-            if (hoverGrid != null)
+            // Snap-to-grid: place item so its bottom-left coincides with the placement origin
+            // cell in WORLD space. With pick offset applied, the originally-clicked cell of
+            // the shape ends up exactly under the cursor.
+            if (hoverGrid != null
+                && hoverX >= 0 && hoverX < hoverGrid.Width
+                && hoverY >= 0 && hoverY < hoverGrid.Height)
             {
                 var cellRt = hoverGrid.CellRects[hoverX, hoverY];
                 Held.transform.position = cellRt.position;
                 return;
             }
 
-            // Free-follow when cursor isn't over any grid.
+            // Free-follow when cursor isn't over any grid (or placement origin is out of bounds).
             if (RectTransformUtility.ScreenPointToWorldPointInRectangle(DragLayer, mouseScreen, UiCamera, out var worldPos))
                 Held.transform.position = worldPos;
         }
@@ -122,21 +129,34 @@ namespace Mimic.Input
             }
             grid.Model.TryGetPlacement(item, out originX, out originY, out originRot);
             originGrid = grid;
+
+            // Compute pick offset: which cell of the shape was under the cursor at click time.
+            // (clickCell.x - originX, clickCell.y - originY) — both in grid coords.
+            pickOffsetX = 0;
+            pickOffsetY = 0;
+            var mouseNow = Mouse.current;
+            if (mouseNow != null
+                && grid.ScreenToCell(mouseNow.position.ReadValue(), UiCamera, out int clickX, out int clickY))
+            {
+                pickOffsetX = clickX - originX;
+                pickOffsetY = clickY - originY;
+            }
+
             grid.Model.Remove(item);
 
             Held = item;
             pickedFrame = Time.frameCount;
+            item.SetCarried(true, CarriedAlpha);
             item.transform.SetParent(DragLayer, worldPositionStays: false);
 
             if (VerboseLogs)
-                Debug.Log($"[Drag] PICK {item.Data?.Id ?? item.name} from {grid.name} at ({originX},{originY}) rot={originRot}");
+                Debug.Log($"[Drag] PICK {item.Data?.Id ?? item.name} from {grid.name} at ({originX},{originY}) rot={originRot} offset=({pickOffsetX},{pickOffsetY})");
 
             // Force immediate position update so the picked item appears under the cursor
             // on the same frame, not next-frame.
-            var mouse = Mouse.current;
-            if (mouse != null)
+            if (mouseNow != null)
             {
-                var ms = mouse.position.ReadValue();
+                var ms = mouseNow.position.ReadValue();
                 UpdateHighlight(ms);
                 FollowCursor(ms);
             }
@@ -148,6 +168,7 @@ namespace Mimic.Input
             Held.CurrentRotation = originRot;
             originGrid.Model.TryPlace(Held, originX, originY, originRot);
             SnapToGrid(Held, originGrid, originX, originY);
+            Held.SetCarried(false, 1f);
             if (VerboseLogs)
                 Debug.Log($"[Drag] CANCEL → returned {Held.Data?.Id} to {originGrid.name} ({originX},{originY})");
             Held = null;
@@ -157,13 +178,8 @@ namespace Mimic.Input
 
         private void TryDrop(LootView clickedItem)
         {
-            // Click hit another item — drop onto its origin cell.
-            var grid = FindGridContaining(clickedItem);
-            if (grid != null)
-            {
-                grid.Model.TryGetPlacement(clickedItem, out var x, out var y, out _);
-                TryDropAt(grid, x, y);
-            }
+            // Click hit another item — try to drop onto current hover cell (already computed).
+            if (hoverGrid != null && hoverCanPlace) TryDropAt(hoverGrid, hoverX, hoverY);
         }
 
         private void TryDropAt(GridView grid, int x, int y)
@@ -178,6 +194,7 @@ namespace Mimic.Input
             {
                 Held.transform.SetParent(grid.CellsRoot, worldPositionStays: false);
                 SnapToGrid(Held, grid, x, y);
+                Held.SetCarried(false, 1f);
                 if (VerboseLogs)
                     Debug.Log($"[Drag] DROP OK → {grid.name} ({x},{y}) rot={Held.CurrentRotation}");
                 Held = null;
@@ -199,52 +216,65 @@ namespace Mimic.Input
 
             var grid = ScreenOverGrid(screenPos);
             if (grid == null) return;
-            if (!grid.ScreenToCell(screenPos, UiCamera, out int x, out int y)) return;
+            if (!grid.ScreenToCell(screenPos, UiCamera, out int cursorX, out int cursorY)) return;
 
-            bool canPlace = grid.Model.TryPlace(Held, x, y, Held.CurrentRotation);
-            if (canPlace) grid.Model.Remove(Held);
-
-            hoverGrid = grid;
-            hoverX = x;
-            hoverY = y;
-            hoverCanPlace = canPlace;
-
-            // Log only when hover cell or grid changes — avoids spamming every frame.
-            if (VerboseLogs && (loggedHoverGrid != grid || loggedHoverX != x || loggedHoverY != y))
-            {
-                Debug.Log($"[Drag] HOVER {grid.name} cell=({x},{y}) canPlace={canPlace} screenPos={screenPos}");
-                loggedHoverGrid = grid;
-                loggedHoverX = x;
-                loggedHoverY = y;
-            }
+            // Placement origin = cursor cell minus the offset, so the originally-clicked cell
+            // of the shape lands back under the cursor.
+            int placeX = cursorX - pickOffsetX;
+            int placeY = cursorY - pickOffsetY;
 
             var cells = Held.Shape.GetRotatedCells(Held.CurrentRotation);
             int rows = cells.GetLength(0);
             int cols = cells.GetLength(1);
+
+            // Per-cell check: each occupied shape-cell is green if its target grid-cell is
+            // both in-bounds and empty; red otherwise. allFree = whole footprint fits.
+            bool allFree = true;
             for (int r = 0; r < rows; r++)
             {
                 for (int c = 0; c < cols; c++)
                 {
                     if (!cells[r, c]) continue;
-                    int cx = x + c, cy = y + r;
-                    if (cx < 0 || cx >= grid.Width || cy < 0 || cy >= grid.Height) continue;
-                    SetCellHighlight(grid, cx, cy, canPlace ? Color.green : Color.red, 0.4f);
+                    int gx = placeX + c;
+                    int gy = placeY + (rows - 1 - r); // match GridModel Y-flip
+                    bool inBounds = gx >= 0 && gx < grid.Width && gy >= 0 && gy < grid.Height;
+                    bool free = inBounds && grid.Model.GetAt(gx, gy) == null;
+                    if (!free) allFree = false;
+
+                    if (inBounds)
+                        SetCellHighlight(grid, gx, gy, free ? HighlightFreeColor : HighlightBlockedColor);
                 }
+            }
+
+            hoverGrid = grid;
+            hoverX = placeX;
+            hoverY = placeY;
+            hoverCanPlace = allFree;
+
+            if (VerboseLogs && (loggedHoverGrid != grid || loggedHoverX != placeX || loggedHoverY != placeY))
+            {
+                Debug.Log($"[Drag] HOVER {grid.name} cursor=({cursorX},{cursorY}) place=({placeX},{placeY}) canPlace={allFree} screenPos={screenPos}");
+                loggedHoverGrid = grid;
+                loggedHoverX = placeX;
+                loggedHoverY = placeY;
             }
         }
 
         private void ClearHighlight()
         {
-            ClearGridHighlight(MimicGrid);
-            ClearGridHighlight(AdventurerGrid);
+            if (MimicGrid != null) ClearGridHighlight(MimicGrid);
+            if (AdventurerGrid != null) ClearGridHighlight(AdventurerGrid);
         }
 
         private void ClearGridHighlight(GridView grid)
         {
+            if (grid.CellRects == null) return;
             for (int x = 0; x < grid.Width; x++)
                 for (int y = 0; y < grid.Height; y++)
                 {
-                    var h = grid.CellRects[x, y].Find("Highlight");
+                    var rt = grid.CellRects[x, y];
+                    if (rt == null) continue;
+                    var h = rt.Find("Highlight");
                     if (h != null)
                     {
                         var img = h.GetComponent<UnityEngine.UI.Image>();
@@ -253,14 +283,30 @@ namespace Mimic.Input
                 }
         }
 
-        private void SetCellHighlight(GridView grid, int x, int y, Color color, float alpha)
+        private void SetCellHighlight(GridView grid, int x, int y, Color color)
         {
-            var h = grid.CellRects[x, y].Find("Highlight");
-            if (h == null) return;
+            var rt = grid.CellRects[x, y];
+            if (rt == null) return;
+            var h = rt.Find("Highlight");
+            if (h == null)
+            {
+                // Auto-create highlight overlay if the CellPrefab didn't provide one.
+                var go = new GameObject("Highlight",
+                    typeof(RectTransform), typeof(CanvasRenderer), typeof(UnityEngine.UI.Image));
+                var hr = (RectTransform)go.transform;
+                hr.SetParent(rt, worldPositionStays: false);
+                hr.anchorMin = Vector2.zero;
+                hr.anchorMax = Vector2.one;
+                hr.offsetMin = Vector2.zero;
+                hr.offsetMax = Vector2.zero;
+                var img2 = go.GetComponent<UnityEngine.UI.Image>();
+                img2.raycastTarget = false;
+                img2.color = color;
+                return;
+            }
             var img = h.GetComponent<UnityEngine.UI.Image>();
             if (img == null) return;
-            var c = color; c.a = alpha;
-            img.color = c;
+            img.color = color;
         }
 
         private GridView ScreenOverGrid(Vector2 screenPos)
@@ -283,7 +329,6 @@ namespace Mimic.Input
             rt.SetParent(grid.CellsRoot, worldPositionStays: false);
             rt.anchorMin = rt.anchorMax = new Vector2(0, 0);
             rt.pivot = new Vector2(0, 0);
-            // Use world-space cell position — robust against parent pivot/anchor.
             var cellRt = grid.CellRects[x, y];
             rt.position = cellRt.position;
         }
