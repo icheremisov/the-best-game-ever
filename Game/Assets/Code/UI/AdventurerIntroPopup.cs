@@ -16,7 +16,10 @@ namespace Mimic.UI
         private void Awake()
         {
             if (EatButton != null)
+            {
+                PopupHelpers.EnsureButtonLabel(EatButton, "Сожрать", 28);
                 EatButton.onClick.AddListener(() => { onEat?.Invoke(); gameObject.SetActive(false); });
+            }
             gameObject.SetActive(false);
         }
 

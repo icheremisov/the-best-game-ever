@@ -14,9 +14,15 @@ namespace Mimic.UI
         private void Awake()
         {
             if (RetryButton != null)
+            {
+                PopupHelpers.EnsureButtonLabel(RetryButton, "Начать заново", 24);
                 RetryButton.onClick.AddListener(() => SceneManager.LoadScene("Game"));
+            }
             if (MenuButton != null)
+            {
+                PopupHelpers.EnsureButtonLabel(MenuButton, "В меню", 24);
                 MenuButton.onClick.AddListener(() => SceneManager.LoadScene("MainMenu"));
+            }
             gameObject.SetActive(false);
         }
 

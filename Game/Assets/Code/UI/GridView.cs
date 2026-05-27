@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 using Mimic.Logic;
 
 namespace Mimic.UI
@@ -14,6 +15,11 @@ namespace Mimic.UI
         public RectTransform CellsRoot;
         public GameObject CellPrefab;
 
+        [Header("Style")]
+        public Color CellFillColor = new Color(0.18f, 0.18f, 0.22f, 1f);
+        public Color CellBorderColor = new Color(0.45f, 0.45f, 0.50f, 1f);
+        public int BorderPixels = 2;
+
         public GridModel<LootView> Model { get; private set; }
         public RectTransform[,] CellRects { get; private set; }
 
@@ -26,9 +32,12 @@ namespace Mimic.UI
 
         private void BuildCells()
         {
-            // Clear existing
             for (int i = CellsRoot.childCount - 1; i >= 0; i--)
                 DestroyImmediate(CellsRoot.GetChild(i).gameObject);
+
+            // Procedural cell sprite — opaque dark fill with a solid border on all 4 sides.
+            // Independent of screen resolution / Outline component glitches.
+            var cellSprite = CreateBorderedCellSprite((int)CellSize, BorderPixels, CellFillColor, CellBorderColor);
 
             for (int y = 0; y < Height; y++)
             {
@@ -41,16 +50,55 @@ namespace Mimic.UI
                     rt.pivot = new Vector2(0, 0);
                     rt.sizeDelta = new Vector2(CellSize, CellSize);
                     rt.anchoredPosition = new Vector2(x * CellSize, y * CellSize);
-                    // Make grid cells visibly bordered + slightly darker fill so the grid is readable
-                    var img = cell.GetComponent<UnityEngine.UI.Image>();
-                    if (img != null) img.color = new Color(0.18f, 0.18f, 0.22f, 1f);
-                    var outline = cell.GetComponent<UnityEngine.UI.Outline>();
-                    if (outline == null) outline = cell.AddComponent<UnityEngine.UI.Outline>();
-                    outline.effectColor = new Color(0.45f, 0.45f, 0.50f, 1f);
-                    outline.effectDistance = new Vector2(1, -1);
+
+                    var img = cell.GetComponent<Image>();
+                    if (img != null)
+                    {
+                        img.sprite = cellSprite;
+                        img.color = Color.white;
+                        img.type = Image.Type.Simple;
+                    }
+
+                    // Remove any leftover Outline component — texture has the border.
+                    var oldOutline = cell.GetComponent<Outline>();
+                    if (oldOutline != null) Destroy(oldOutline);
+
                     CellRects[x, y] = rt;
                 }
             }
+        }
+
+        private static Sprite cachedSprite;
+        private static int cachedSize, cachedBorder;
+        private static Color cachedFill, cachedBorderColor;
+
+        private static Sprite CreateBorderedCellSprite(int size, int border, Color fill, Color borderColor)
+        {
+            if (cachedSprite != null && cachedSize == size && cachedBorder == border
+                && cachedFill == fill && cachedBorderColor == borderColor)
+                return cachedSprite;
+
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point };
+            var pixels = new Color32[size * size];
+            var fill32 = (Color32)fill;
+            var border32 = (Color32)borderColor;
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    bool onBorder = x < border || y < border || x >= size - border || y >= size - border;
+                    pixels[y * size + x] = onBorder ? border32 : fill32;
+                }
+            }
+            tex.SetPixels32(pixels);
+            tex.Apply();
+
+            cachedSprite = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect);
+            cachedSize = size;
+            cachedBorder = border;
+            cachedFill = fill;
+            cachedBorderColor = borderColor;
+            return cachedSprite;
         }
 
         public bool ScreenToCell(Vector2 screenPos, Camera cam, out int x, out int y)
