@@ -85,6 +85,10 @@ namespace Mimic.UI
             return Palette[hash % Palette.Length];
         }
 
+        // Per-shape-cell highlight overlays, indexed by pattern (r, c).
+        // null at positions where the shape has no cell.
+        private Image[,] cellHighlightImages;
+
         private void BuildCells()
         {
             for (int i = CellsRoot.childCount - 1; i >= 0; i--)
@@ -95,10 +99,11 @@ namespace Mimic.UI
             int rows = cells.GetLength(0);
             int cols = cells.GetLength(1);
 
-            // Root + CellsRoot get the bounding box size
             var size = new Vector2(cols * CellSize, rows * CellSize);
             ((RectTransform)transform).sizeDelta = size;
             CellsRoot.sizeDelta = size;
+
+            cellHighlightImages = new Image[rows, cols];
 
             for (int r = 0; r < rows; r++)
             {
@@ -110,7 +115,6 @@ namespace Mimic.UI
                     rt.anchorMin = rt.anchorMax = new Vector2(0, 0);
                     rt.pivot = new Vector2(0, 0);
                     rt.sizeDelta = new Vector2(CellSize, CellSize);
-                    // Pattern row 0 is visually TOP, so flip into UI Y (bottom-up) here too.
                     rt.anchoredPosition = new Vector2(c * CellSize, (rows - 1 - r) * CellSize);
                     var img = go.GetComponent<Image>();
                     if (img != null)
@@ -122,9 +126,51 @@ namespace Mimic.UI
                     if (outline == null) outline = go.AddComponent<Outline>();
                     outline.effectColor = new Color(0, 0, 0, 0.8f);
                     outline.effectDistance = new Vector2(2, -2);
+
+                    // Highlight overlay on top of the cell — painted during drag,
+                    // ALWAYS rendered above the colored cell (and below the Label).
+                    cellHighlightImages[r, c] = CreateHighlightChild(go.transform);
                 }
             }
+            // Label stays at the very top (above all cells and highlights)
             if (Label != null) Label.transform.SetAsLastSibling();
+        }
+
+        private static Image CreateHighlightChild(Transform parent)
+        {
+            var hgo = new GameObject("Highlight",
+                typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            var hrt = (RectTransform)hgo.transform;
+            hrt.SetParent(parent, worldPositionStays: false);
+            hrt.anchorMin = Vector2.zero;
+            hrt.anchorMax = Vector2.one;
+            hrt.offsetMin = Vector2.zero;
+            hrt.offsetMax = Vector2.zero;
+            var img = hgo.GetComponent<Image>();
+            img.raycastTarget = false;
+            img.color = new Color(0, 0, 0, 0);
+            return img;
+        }
+
+        public void SetCellHighlight(int r, int c, Color color)
+        {
+            if (cellHighlightImages == null) return;
+            int rows = cellHighlightImages.GetLength(0);
+            int cols = cellHighlightImages.GetLength(1);
+            if (r < 0 || r >= rows || c < 0 || c >= cols) return;
+            var img = cellHighlightImages[r, c];
+            if (img != null) img.color = color;
+        }
+
+        public void ClearAllHighlights()
+        {
+            if (cellHighlightImages == null) return;
+            int rows = cellHighlightImages.GetLength(0);
+            int cols = cellHighlightImages.GetLength(1);
+            var clear = new Color(0, 0, 0, 0);
+            for (int r = 0; r < rows; r++)
+                for (int c = 0; c < cols; c++)
+                    if (cellHighlightImages[r, c] != null) cellHighlightImages[r, c].color = clear;
         }
 
         public void Rotate(bool clockwise)
