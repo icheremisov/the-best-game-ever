@@ -41,6 +41,13 @@ namespace Mimic.UI
                     rt.pivot = new Vector2(0, 0);
                     rt.sizeDelta = new Vector2(CellSize, CellSize);
                     rt.anchoredPosition = new Vector2(x * CellSize, y * CellSize);
+                    // Make grid cells visibly bordered + slightly darker fill so the grid is readable
+                    var img = cell.GetComponent<UnityEngine.UI.Image>();
+                    if (img != null) img.color = new Color(0.18f, 0.18f, 0.22f, 1f);
+                    var outline = cell.GetComponent<UnityEngine.UI.Outline>();
+                    if (outline == null) outline = cell.AddComponent<UnityEngine.UI.Outline>();
+                    outline.effectColor = new Color(0.45f, 0.45f, 0.50f, 1f);
+                    outline.effectDistance = new Vector2(1, -1);
                     CellRects[x, y] = rt;
                 }
             }

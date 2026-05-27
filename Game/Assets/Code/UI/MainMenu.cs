@@ -11,6 +11,7 @@ namespace Mimic.UI
 
         private void Awake()
         {
+            EnsureMainCamera();
             if (StartButton != null)
                 StartButton.onClick.AddListener(() => SceneManager.LoadScene("Game"));
             if (QuitButton != null)
@@ -22,6 +23,19 @@ namespace Mimic.UI
                     Application.Quit();
 #endif
                 });
+        }
+
+        private static void EnsureMainCamera()
+        {
+            if (Camera.main != null) return;
+            var go = new GameObject("Main Camera");
+            go.tag = "MainCamera";
+            var cam = go.AddComponent<Camera>();
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.backgroundColor = new Color(0.08f, 0.06f, 0.10f, 1f);
+            cam.orthographic = true;
+            cam.cullingMask = 0;
+            go.AddComponent<AudioListener>();
         }
     }
 }
