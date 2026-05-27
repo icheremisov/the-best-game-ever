@@ -20,6 +20,22 @@ namespace Mimic.UI
         public Button SurrenderButton;
         public Text NextButtonLabel;
 
+        [Header("Style overrides")]
+        public int TopBarFontSize = 36;
+        public int BottomLabelFontSize = 28;
+
+        private void Awake()
+        {
+            ApplyFontSizes();
+        }
+
+        private void ApplyFontSizes()
+        {
+            foreach (var t in new[] { GoldInMimicText, DayQuotaText, DayCounterText, HeroCounterText })
+                if (t != null) { t.fontSize = TopBarFontSize; t.alignment = TextAnchor.MiddleCenter; }
+            if (NextButtonLabel != null) NextButtonLabel.fontSize = BottomLabelFontSize;
+        }
+
         public void Refresh()
         {
             var ctx = GameContext.Instance;

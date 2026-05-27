@@ -23,10 +23,27 @@ namespace Mimic.Game
         private void Awake()
         {
             Instance = this;
+            EnsureMainCamera();
             LootCatalog.Load();
             AdventurerCatalog.Load();
             DayConfig.Load();
             Resources.StartDay(DayConfig.Current);
+        }
+
+        // Ensures a Camera exists in the scene so Unity doesn't complain
+        // "Display 1 No cameras rendering". ScreenSpaceOverlay UI doesn't need a camera,
+        // but Unity still warns; this gives us a dark clear-color background too.
+        private static void EnsureMainCamera()
+        {
+            if (Camera.main != null) return;
+            var go = new GameObject("Main Camera");
+            go.tag = "MainCamera";
+            var cam = go.AddComponent<Camera>();
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.backgroundColor = new Color(0.08f, 0.06f, 0.10f, 1f);
+            cam.orthographic = true;
+            cam.cullingMask = 0; // render nothing — Canvas Overlay draws separately
+            go.AddComponent<AudioListener>();
         }
 
         public void OnGridChanged()

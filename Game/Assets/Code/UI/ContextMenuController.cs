@@ -40,7 +40,7 @@ namespace Mimic.UI
             Panel.gameObject.SetActive(true);
 
             if (RectTransformUtility.ScreenPointToLocalPointInRectangle(
-                    (RectTransform)Panel.parent, UnityEngine.Input.mousePosition, UiCamera, out var local))
+                    (RectTransform)Panel.parent, (UnityEngine.InputSystem.Mouse.current != null ? UnityEngine.InputSystem.Mouse.current.position.ReadValue() : Vector2.zero), UiCamera, out var local))
                 Panel.anchoredPosition = local;
         }
 

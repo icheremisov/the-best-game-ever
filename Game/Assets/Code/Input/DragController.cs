@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 using Mimic.Logic;
 using Mimic.UI;
 using Mimic.Game;
@@ -28,17 +29,19 @@ namespace Mimic.Input
         {
             if (Held == null) return;
 
+            var mouse = Mouse.current;
+            if (mouse == null) return;
+
+            var mouseScreen = mouse.position.ReadValue();
+
             // Follow cursor
-            var mouseScreen = UnityEngine.Input.mousePosition;
             if (RectTransformUtility.ScreenPointToLocalPointInRectangle(DragLayer, mouseScreen, UiCamera, out var local))
                 ((RectTransform)Held.transform).anchoredPosition = local;
 
             UpdateHighlight(mouseScreen);
 
             // Click on empty cell while holding → drop there.
-            // LootView's IPointerDownHandler captures clicks on existing items first
-            // (handled by OnLootClicked); this branch fires only when the click missed any item.
-            if (UnityEngine.Input.GetMouseButtonDown(0))
+            if (mouse.leftButton.wasPressedThisFrame)
             {
                 var grid = ScreenOverGrid(mouseScreen);
                 if (grid != null
@@ -48,9 +51,8 @@ namespace Mimic.Input
                     TryDropAt(grid, cx, cy);
                 }
             }
-            else if (UnityEngine.Input.GetMouseButtonDown(1))
+            else if (mouse.rightButton.wasPressedThisFrame)
             {
-                // Right-click anywhere while holding → cancel
                 Cancel();
             }
         }
