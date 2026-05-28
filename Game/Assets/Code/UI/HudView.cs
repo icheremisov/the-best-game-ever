@@ -89,7 +89,7 @@ namespace Mimic.UI
             t.alignment = TextAnchor.MiddleCenter;
             t.fontSize = BarLabelFontSize;
             t.color = Color.white;
-            t.font = t.font ?? Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            t.font = FontProvider.Default;
             t.raycastTarget = false;
             t.fontStyle = FontStyle.Bold;
             // Black outline for readability over filled bars

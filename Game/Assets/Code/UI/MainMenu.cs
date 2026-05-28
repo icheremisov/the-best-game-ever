@@ -12,6 +12,7 @@ namespace Mimic.UI
         private void Awake()
         {
             EnsureMainCamera();
+            FontProvider.ApplyToAllScene();
             if (StartButton != null)
                 StartButton.onClick.AddListener(() => SceneManager.LoadScene("Game"));
             if (QuitButton != null)

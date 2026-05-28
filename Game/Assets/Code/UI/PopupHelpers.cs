@@ -44,7 +44,7 @@ namespace Mimic.UI
             t.color = Color.white;
             t.raycastTarget = false;
             t.fontStyle = FontStyle.Bold;
-            t.font = t.font ?? Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            t.font = FontProvider.Default;
             return t;
         }
     }
