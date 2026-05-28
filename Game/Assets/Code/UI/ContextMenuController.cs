@@ -87,19 +87,20 @@ namespace Mimic.UI
         public void Open(LootView item)
         {
             var ctx = GameContext.Instance;
-            if (ctx == null || ctx.MimicGrid == null) return;
+            if (ctx == null || ctx.MimicGrid == null) { Debug.LogWarning("[CtxMenu] no ctx/MimicGrid"); return; }
             bool inMimic = false;
             foreach (var i in ctx.MimicGrid.Model.AllItems())
                 if (i == item) { inMimic = true; break; }
-            if (!inMimic) return;
+            if (!inMimic) { Debug.LogWarning("[CtxMenu] item not in mimic"); return; }
 
             target = item;
             int cost = ctx.LastResolved != null ? ctx.LastResolved.GetAcid(item) : item.Data.AcidCost;
             if (DigestLabel != null) DigestLabel.text = $"Переварить ({cost} сока)";
             if (DigestButton != null) DigestButton.interactable = ctx.Resources.CurrentAcid >= cost;
-            if (Panel == null) return;
+            if (Panel == null) { Debug.LogWarning("[CtxMenu] Panel is null!"); return; }
             Panel.gameObject.SetActive(true);
             Panel.SetAsLastSibling();
+            Debug.Log($"[CtxMenu] OPEN ok — Panel active={Panel.gameObject.activeInHierarchy} parent={Panel.parent?.name} size={Panel.rect.size} label='{(DigestLabel != null ? DigestLabel.text : "<null>")}'");
 
             var mouse = UnityEngine.InputSystem.Mouse.current;
             if (RectTransformUtility.ScreenPointToLocalPointInRectangle(
