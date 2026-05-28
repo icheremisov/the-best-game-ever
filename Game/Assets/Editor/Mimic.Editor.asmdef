@@ -1,7 +1,7 @@
 {
     "name": "Mimic.Editor",
     "rootNamespace": "Mimic.EditorTools",
-    "references": [],
+    "references": ["Code"],
     "includePlatforms": ["Editor"],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
