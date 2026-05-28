@@ -87,28 +87,34 @@ namespace Mimic.UI
         public void Open(LootView item)
         {
             var ctx = GameContext.Instance;
-            if (ctx == null || ctx.MimicGrid == null) { Debug.LogWarning("[CtxMenu] no ctx/MimicGrid"); return; }
+            if (ctx == null || ctx.MimicGrid == null) return;
             bool inMimic = false;
             foreach (var i in ctx.MimicGrid.Model.AllItems())
                 if (i == item) { inMimic = true; break; }
-            if (!inMimic) { Debug.LogWarning("[CtxMenu] item not in mimic"); return; }
+            if (!inMimic) return;
 
             target = item;
             int cost = ctx.LastResolved != null ? ctx.LastResolved.GetAcid(item) : item.Data.AcidCost;
             if (DigestLabel != null) DigestLabel.text = $"Переварить ({cost} сока)";
             if (DigestButton != null) DigestButton.interactable = ctx.Resources.CurrentAcid >= cost;
-            if (Panel == null) { Debug.LogWarning("[CtxMenu] Panel is null!"); return; }
+            if (Panel == null) return;
+            Panel.pivot = new Vector2(0, 1); // top-left so it opens down-right from cursor
             Panel.gameObject.SetActive(true);
             Panel.SetAsLastSibling();
-            Debug.Log($"[CtxMenu] OPEN ok — Panel active={Panel.gameObject.activeInHierarchy} parent={Panel.parent?.name} size={Panel.rect.size} label='{(DigestLabel != null ? DigestLabel.text : "<null>")}'");
 
+            // World-space positioning — robust regardless of Canvas pivot/anchor.
+            // For a ScreenSpaceOverlay canvas, world coords == screen pixels.
             var mouse = UnityEngine.InputSystem.Mouse.current;
-            if (RectTransformUtility.ScreenPointToLocalPointInRectangle(
-                    (RectTransform)Panel.parent,
-                    mouse != null ? mouse.position.ReadValue() : Vector2.zero,
-                    UiCamera,
-                    out var local))
-                Panel.anchoredPosition = local;
+            Vector2 screenPos = mouse != null ? mouse.position.ReadValue() : new Vector2(Screen.width * 0.5f, Screen.height * 0.5f);
+
+            Canvas.ForceUpdateCanvases();
+            float w = Panel.rect.width, h = Panel.rect.height;
+            float x = screenPos.x;
+            float y = screenPos.y;
+            // Keep on-screen.
+            if (x + w > Screen.width) x = Screen.width - w;
+            if (y - h < 0) y = h;
+            Panel.position = new Vector3(x, y, 0);
         }
 
         public void Close()
