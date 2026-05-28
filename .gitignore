@@ -117,6 +117,10 @@ Game/ProjectSettings/SceneTemplateSettings.json
 # Local build artifacts
 Builds/
 
+# Unity Test Runner / Adaptive Performance generated run info
+Game/Assets/Resources/PerformanceTestRunInfo.json
+Game/Assets/Resources/PerformanceTestRunSettings.json
+
 # MCP for Unity / playtest screenshots
 Game/Assets/Screenshots/
 Game/Assets/Screenshots.meta
