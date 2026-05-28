@@ -22,7 +22,7 @@ namespace Mimic.UI
         public Canvas HostCanvas; // parent for auto-created Panel
 
         [Header("Style")]
-        public Vector2 CursorOffset = new Vector2(24, 24);
+        public Vector2 ItemSideGap = new Vector2(12, 0); // pixel gap between item and tooltip
         public int NameFontSize = 26;
         public int DescriptionFontSize = 18;
         public int StatFontSize = 20;
@@ -137,14 +137,43 @@ namespace Mimic.UI
             if (t.transform.parent != Panel) t.transform.SetParent(Panel, false);
         }
 
-        private void Update()
+        // Anchored to the hovered item, not the cursor — repositions every frame so
+        // that if the item moves the tooltip follows it.
+        private LootView trackedItem;
+
+        private void LateUpdate()
         {
-            if (Panel == null || !Panel.gameObject.activeSelf) return;
-            var mouse = UnityEngine.InputSystem.Mouse.current;
-            if (mouse == null) return;
-            if (RectTransformUtility.ScreenPointToLocalPointInRectangle(
-                    (RectTransform)Panel.parent, mouse.position.ReadValue(), UiCamera, out var local))
-                Panel.anchoredPosition = local + CursorOffset;
+            if (Panel == null || !Panel.gameObject.activeSelf || trackedItem == null) return;
+            PositionRightOf(trackedItem);
+        }
+
+        private void PositionRightOf(LootView item)
+        {
+            var itemRt = (RectTransform)item.transform;
+            var corners = new Vector3[4];
+            itemRt.GetWorldCorners(corners);
+            // corners: 0 = bottom-left, 1 = top-left, 2 = top-right, 3 = bottom-right
+            Vector3 topRight = corners[2];
+            Vector3 topLeft = corners[1];
+
+            // Force a layout pass so Panel.rect.width is up-to-date for the edge check.
+            Canvas.ForceUpdateCanvases();
+            LayoutRebuilder.ForceRebuildLayoutImmediate(Panel);
+            float panelW = Panel.rect.width;
+            float panelH = Panel.rect.height;
+
+            // Default: place to the right of the item, top aligned to item top.
+            Vector3 placeAt = topRight + new Vector3(ItemSideGap.x, ItemSideGap.y, 0);
+
+            // If it would extend past the right edge of the screen, flip to the left side.
+            if (placeAt.x + panelW > Screen.width)
+                placeAt = topLeft + new Vector3(-ItemSideGap.x - panelW, ItemSideGap.y, 0);
+
+            // If it would extend past the bottom edge, shift up.
+            if (placeAt.y - panelH < 0)
+                placeAt.y = panelH;
+
+            Panel.position = placeAt;
         }
 
         public void Show(LootView item)
@@ -159,6 +188,7 @@ namespace Mimic.UI
 
             Panel.gameObject.SetActive(true);
             Panel.SetAsLastSibling(); // draw above other UI
+            trackedItem = item;
 
             var data = item.Data;
             NameText.text = data.Name;
@@ -190,6 +220,9 @@ namespace Mimic.UI
                 AdjacencyText.text = (active ? "✓ " : "○ ") + adjacencyDesc;
                 AdjacencyText.color = active ? BoostColor : Color.gray;
             }
+
+            // First-frame placement (LateUpdate will keep it pinned every frame after).
+            PositionRightOf(item);
 
             if (VerboseLogs) Debug.Log($"[Tooltip] Show {data.Id} (inMimic={inMimic})");
         }
@@ -261,6 +294,7 @@ namespace Mimic.UI
 
         public void Hide()
         {
+            trackedItem = null;
             if (Panel != null) Panel.gameObject.SetActive(false);
         }
     }
