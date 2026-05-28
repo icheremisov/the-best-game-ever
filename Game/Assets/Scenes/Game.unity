@@ -154,8 +154,8 @@ RectTransform:
   - {fileID: 2083624036}
   m_Father: {fileID: 1955889457}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -394,8 +394,8 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1975264835}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -664,8 +664,8 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1975264835}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -877,8 +877,8 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1955889457}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -1119,8 +1119,8 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1975264835}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -1337,7 +1337,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8254973991254705733, guid: 70dea2f35130246d6b2b549187140396, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 100
+      value: 200
       objectReference: {fileID: 0}
     - target: {fileID: 8254973991254705733, guid: 70dea2f35130246d6b2b549187140396, type: 3}
       propertyPath: m_SizeDelta.y
@@ -1609,6 +1609,7 @@ MonoBehaviour:
   DigestButton: {fileID: 1024993013}
   DigestLabel: {fileID: 1024993012}
   UiCamera: {fileID: 0}
+  HostCanvas: {fileID: 0}
 --- !u!1 &1038936588
 GameObject:
   m_ObjectHideFlags: 0
@@ -1717,8 +1718,8 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1975264835}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -1847,6 +1848,9 @@ MonoBehaviour:
   NextButton: {fileID: 117035254}
   SurrenderButton: {fileID: 1712776478}
   NextButtonLabel: {fileID: 2083624038}
+  TopBarFontSize: 36
+  BottomLabelFontSize: 28
+  BarLabelFontSize: 24
 --- !u!114 &1568796656
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1918,8 +1922,8 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 1955889457}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -2124,8 +2128,8 @@ RectTransform:
   - {fileID: 139744543}
   m_Father: {fileID: 1955889457}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -2281,6 +2285,10 @@ MonoBehaviour:
   AdventurerGrid: {fileID: 842596721}
   DragLayer: {fileID: 1038936589}
   UiCamera: {fileID: 0}
+  CarriedAlpha: 0.5
+  HighlightFreeColor: {r: 0.3, g: 0.85, b: 0.3, a: 0.65}
+  HighlightBlockedColor: {r: 0.85, g: 0.2, b: 0.2, a: 0.65}
+  VerboseLogs: 1
 --- !u!114 &1791008133
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2908,6 +2916,15 @@ MonoBehaviour:
   AcidText: {fileID: 2138911581}
   AdjacencyText: {fileID: 2138911580}
   UiCamera: {fileID: 0}
+  HostCanvas: {fileID: 0}
+  ItemSideGap: {x: 12, y: 0}
+  NameFontSize: 26
+  DescriptionFontSize: 18
+  StatFontSize: 20
+  AdjacencyFontSize: 18
+  BoostColor: {r: 0.45, g: 0.95, b: 0.45, a: 1}
+  PenaltyColor: {r: 0.95, g: 0.45, b: 0.45, a: 1}
+  VerboseLogs: 0
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
