@@ -56,10 +56,18 @@ namespace Mimic.Input
 
         private void Update()
         {
-            if (Held == null) return;
-
             var mouse = Mouse.current;
             if (mouse == null) return;
+
+            // --- Not holding anything: handle RMB → context menu / LMB → close menu ---
+            // Done via direct Mouse polling because InputSystemUIInputModule may not
+            // forward right-clicks as pointer events depending on its action config.
+            if (Held == null)
+            {
+                if (mouse.rightButton.wasPressedThisFrame)
+                    HandleRightClickIdle(mouse.position.ReadValue());
+                return;
+            }
 
             var mouseScreen = mouse.position.ReadValue();
 
@@ -119,16 +127,28 @@ namespace Mimic.Input
             }
         }
 
+        // RMB while not holding: open the context menu for the item under the cursor
+        // (mimic grid only — handled by ContextMenuController.Open). Clicking empty
+        // space closes any open menu.
+        private void HandleRightClickIdle(Vector2 screenPos)
+        {
+            if (MimicGrid != null && MimicGrid.ScreenToCell(screenPos, UiCamera, out int x, out int y))
+            {
+                var item = MimicGrid.Model.GetAt(x, y);
+                if (item != null)
+                {
+                    if (VerboseLogs) Debug.Log($"[Drag] RMB context menu for {item.Data?.Id} at ({x},{y})");
+                    ContextMenuController.Instance?.Open(item);
+                    return;
+                }
+            }
+            ContextMenuController.Instance?.Close();
+        }
+
         public void OnLootClicked(LootView item)
         {
             if (Held == null) Pick(item);
             else TryDrop(item);
-        }
-
-        public void OnLootRightClicked(LootView item)
-        {
-            if (Held != null) Cancel();
-            else ContextMenuController.Instance?.Open(item);
         }
 
         public void OnEmptyCellClicked(GridView grid, int x, int y)
@@ -195,6 +215,7 @@ namespace Mimic.Input
 
             grid.Model.Remove(item);
 
+            ContextMenuController.Instance?.Close(); // close any open menu when starting a drag
             Held = item;
             item.SetCarried(true, CarriedAlpha);
             item.transform.SetParent(DragLayer, worldPositionStays: false);

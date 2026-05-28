@@ -209,10 +209,11 @@ namespace Mimic.UI
 
         public void OnPointerDown(PointerEventData ev)
         {
+            // Only left-click is handled via EventSystem (reliable). Right-click for
+            // the context menu is polled directly in DragController.Update because the
+            // new Input System UI module doesn't always forward RMB pointer events.
             if (ev.button == PointerEventData.InputButton.Left)
                 DragController.Instance?.OnLootClicked(this);
-            else if (ev.button == PointerEventData.InputButton.Right)
-                DragController.Instance?.OnLootRightClicked(this);
         }
 
         public void OnPointerEnter(PointerEventData ev)
