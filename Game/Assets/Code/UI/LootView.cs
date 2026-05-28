@@ -64,6 +64,7 @@ namespace Mimic.UI
             lt.offsetMin = Vector2.zero;
             lt.offsetMax = Vector2.zero;
             Label.text = text;
+            Label.font = FontProvider.Default;
             Label.fontSize = LabelFontSize;
             Label.color = Color.white;
             Label.alignment = TextAnchor.MiddleCenter;
