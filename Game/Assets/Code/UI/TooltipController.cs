@@ -127,7 +127,7 @@ namespace Mimic.UI
             t.verticalOverflow = VerticalWrapMode.Overflow;
             t.raycastTarget = false;
             t.supportRichText = true;
-            t.font = t.font ?? Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            t.font = FontProvider.Default;
             return t;
         }
 

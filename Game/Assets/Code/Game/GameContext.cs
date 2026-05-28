@@ -25,6 +25,9 @@ namespace Mimic.Game
             Instance = this;
             EnsureMainCamera();
             EnsureRuntimeControllers();
+            int swappedFonts = Mimic.UI.FontProvider.ApplyToAllScene();
+            if (swappedFonts > 0)
+                Debug.Log($"[GameContext] Swapped legacy font on {swappedFonts} Text components (Cyrillic fix).");
             LootCatalog.Load();
             AdventurerCatalog.Load();
             DayConfig.Load();

@@ -79,7 +79,7 @@ namespace Mimic.UI
                 DigestLabel.fontSize = 20;
                 DigestLabel.fontStyle = FontStyle.Bold;
                 DigestLabel.raycastTarget = false;
-                DigestLabel.font = DigestLabel.font ?? Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+                DigestLabel.font = FontProvider.Default;
                 DigestLabel.text = "Переварить";
             }
         }

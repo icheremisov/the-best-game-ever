@@ -114,6 +114,9 @@ Game/Packages/Coplay/
 # Unity scene template auto-config — locally generated
 Game/ProjectSettings/SceneTemplateSettings.json
 
+# Local build artifacts
+Builds/
+
 # MCP for Unity / playtest screenshots
 Game/Assets/Screenshots/
 Game/Assets/Screenshots.meta
