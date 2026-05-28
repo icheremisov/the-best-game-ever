@@ -1,6 +1,6 @@
 id,name,description,shape,gold,acidCost,healOnDigest,cellsRestoredOnDigest,adjacencyTarget,adjacencyEffect
 sword,Меч,"Острый, но тупой",X|X|X|X,10,3,0,0,,
-shield,Щит,"Защита от себя",XX|XX,8,4,5,0,sword,gold:+50%
-barracuda,Барракуда,"Ещё трепыхается",.X|XX|.X|.X,15,5,0,2,bread,acid:-30%
+shield,Щит,Защита от себя,XX|XX,8,4,5,0,sword,gold:+50%
+barracuda,Барракуда,Ещё трепыхается,.X|XX|.X|.X,15,5,0,2,bread,acid:-30%
 bread,Хлеб,Несвежий,XX,3,1,2,0,,
 gem,Самоцвет,Дешёвый блеск,X,20,2,0,0,gem,gold:+25%

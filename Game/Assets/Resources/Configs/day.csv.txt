@@ -1,2 +1,3 @@
 day,goldQuota,startHp,startAcid,adventurerIds
 1,40,3,15,warrior;rogue;mage;warrior;rogue
+2,60,3,15,warrior;rogue;mage;warrior;rogue
