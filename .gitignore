@@ -118,8 +118,8 @@ Game/ProjectSettings/SceneTemplateSettings.json
 Builds/
 
 # Unity Test Runner / Adaptive Performance generated run info
-Game/Assets/Resources/PerformanceTestRunInfo.json
-Game/Assets/Resources/PerformanceTestRunSettings.json
+Game/Assets/Resources/PerformanceTestRunInfo.json*
+Game/Assets/Resources/PerformanceTestRunSettings.json*
 
 # MCP for Unity / playtest screenshots
 Game/Assets/Screenshots/
