@@ -20,6 +20,8 @@ namespace Mimic.UI
 
         private void Awake() => gameObject.SetActive(false);
 
+        public void Hide() => gameObject.SetActive(false);
+
         private void Bind(Button b, Text label, string text, Action cb, ref Action slot, bool visible)
         {
             slot = cb;

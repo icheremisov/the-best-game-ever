@@ -41,6 +41,7 @@ namespace Mimic.Game
         private void BeginDay(bool firstDay)
         {
             var ctx = GameContext.Instance;
+            if (EndPopup != null) EndPopup.Hide(); // спрятать экран конца дня при старте нового/переигранного дня
             if (!firstDay) ctx.Resources.StartDay(DayConfig.Current, firstDay: false);
             daySnapshot = ctx.Resources.SnapshotDayStart();
 
