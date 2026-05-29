@@ -32,7 +32,7 @@ namespace Mimic.Tests
         }
 
         [Test]
-        public void PickStealable_ReturnsNull_WhenNoneFree()
+        public void PickStealable_PicksUncoveredItem()
         {
             var grid = new GridModel<Item>(2, 2);
             var b = Mk("b", "X");
@@ -42,6 +42,13 @@ namespace Mimic.Tests
             // b закрыт t; t свободен -> вернёт t
             var picked = TheftResolver.PickStealable(grid, i => i, seed: 0);
             Assert.AreSame(t, picked);
+        }
+
+        [Test]
+        public void PickStealable_ReturnsNull_WhenGridEmpty()
+        {
+            var grid = new GridModel<Item>(2, 2);
+            Assert.IsNull(TheftResolver.PickStealable(grid, i => i, seed: 0));
         }
 
         [Test]
