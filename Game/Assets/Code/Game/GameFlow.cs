@@ -2,35 +2,55 @@ using System.Collections.Generic;
 using UnityEngine;
 using Mimic.Catalogs;
 using Mimic.Data;
+using Mimic.Logic;
 using Mimic.UI;
 
 namespace Mimic.Game
 {
+    public enum DayPhase { Adventurers, Overlord, RewardChoice, Transition }
+
     public class GameFlow : MonoBehaviour
     {
         [Header("Popups")]
         public AdventurerIntroPopup IntroPopup;
         public SurrenderConfirmPopup SurrenderPopup;
         public EndOfDayPopup EndPopup;
+        public OverlordPopup OverlordPopup;
+        public RewardChoicePopup RewardPopup;
 
         [Header("Scene refs")]
         public HudView Hud;
+
+        public DayPhase Phase { get; private set; }
 
         private Queue<string> queue;
         private int totalInDay;
         private int processed;
         private AdventurerData current;
         private bool dayEnded;
+        private DayStartSnapshot daySnapshot;
 
         private void Start()
         {
+            BeginDay(firstDay: true);
+            Hud.NextButton.onClick.AddListener(NextOrEndDay);
+            Hud.SurrenderButton.onClick.AddListener(() => SurrenderPopup.Show(EndBurst));
+        }
+
+        private void BeginDay(bool firstDay)
+        {
+            var ctx = GameContext.Instance;
+            if (!firstDay) ctx.Resources.StartDay(DayConfig.Current, firstDay: false);
+            daySnapshot = ctx.Resources.SnapshotDayStart();
+
+            Phase = DayPhase.Adventurers;
+            dayEnded = false;
             queue = new Queue<string>(DayConfig.Current.AdventurerIds);
             totalInDay = DayConfig.Current.AdventurerIds.Length;
             processed = 0;
             Hud.SetDayCounter(DayConfig.Current.Day);
             Hud.SetNextButtonLabel("Следующий!");
-            Hud.NextButton.onClick.AddListener(NextOrEndDay);
-            Hud.SurrenderButton.onClick.AddListener(() => SurrenderPopup.Show(EndLose));
+            ctx.OnGridChanged();
             BringNext();
         }
 
@@ -66,11 +86,11 @@ namespace Mimic.Game
             ctx.OnGridChanged();
         }
 
-        private bool TryPlaceFirstFit(GridView grid, LootView view)
+        public static bool TryPlaceFirstFit(GridView grid, LootView view)
         {
             for (int y = 0; y < grid.Height; y++)
                 for (int x = 0; x < grid.Width; x++)
-                    if (grid.Model.TryPlace(view, x, y, Mimic.Logic.Rotation.Deg0))
+                    if (grid.Model.TryPlace(view, x, y, Rotation.Deg0))
                     {
                         var rt = (RectTransform)view.transform;
                         rt.SetParent(grid.CellsRoot, worldPositionStays: false);
@@ -84,38 +104,93 @@ namespace Mimic.Game
 
         public void NextOrEndDay()
         {
+            if (Phase != DayPhase.Adventurers) return;
             var ctx = GameContext.Instance;
-            // Allow next only when adventurer grid is empty
             if (ctx.AdventurerGrid.Model.FreeCellsCount < ctx.AdventurerGrid.Width * ctx.AdventurerGrid.Height)
                 return;
 
-            if (queue.Count == 0) EndDay();
+            if (queue.Count == 0) EnterOverlord();
             else BringNext();
         }
 
-        private void EndDay()
+        private void EnterOverlord()
         {
-            if (dayEnded) return;
-            dayEnded = true;
-            var ctx = GameContext.Instance;
-            int gold = ctx.Resources.CurrentGoldInMimic;
-            int quota = ctx.Resources.DayQuota;
-            if (gold >= quota) EndPopup.ShowWin(gold, quota);
-            else EndPopup.ShowLose("День провален", gold, quota);
+            Phase = DayPhase.Overlord;
+            OverlordPopup.Show(OnSettled);
         }
 
-        private void EndLose()
+        private void OnSettled()
+        {
+            var ctx = GameContext.Instance;
+            if (ctx.Resources.CurrentHp <= 0)
+            {
+                EndDeath();
+                return;
+            }
+            EnterReward();
+        }
+
+        private void EnterReward()
+        {
+            Phase = DayPhase.RewardChoice;
+            var ctx = GameContext.Instance;
+            bool win = ctx.Resources.TotalGold >= ctx.Resources.DayQuota;
+            RewardPopup.Show(win, onTaken: OnRewardTaken, onOvereat: EndBurst);
+        }
+
+        private void OnRewardTaken()
+        {
+            EnterTransition();
+        }
+
+        private void EnterTransition()
+        {
+            Phase = DayPhase.Transition;
+            var ctx = GameContext.Instance;
+            bool canRansom = ctx.Resources.TotalGold >= DayConfig.Current.RansomGold;
+            bool hasNextDay = !DayConfig.IsLastDay;
+            EndPopup.ShowTransition(
+                hasNextDay: hasNextDay,
+                canRansom: canRansom,
+                onNextDay: GoNextDay,
+                onRansom: EndRansomWin,
+                onChallenge: EndChallengeStub);
+        }
+
+        private void GoNextDay()
+        {
+            DayConfig.Advance();
+            BeginDay(firstDay: false);
+        }
+
+        private void EndRansomWin() => EndPopup.ShowRansomWin();
+        private void EndChallengeStub() => EndPopup.ShowChallengeStub();
+
+        private void EndDeath()
         {
             if (dayEnded) return;
             dayEnded = true;
+            EndPopup.ShowDeath(onRetryDay: RetryDay);
+        }
+
+        private void EndBurst()
+        {
+            if (dayEnded) return;
+            dayEnded = true;
+            EndPopup.ShowBurst(onRetryDay: RetryDay);
+        }
+
+        private void RetryDay()
+        {
             var ctx = GameContext.Instance;
-            EndPopup.ShowLose("Вы лопнули от переедания", ctx.Resources.CurrentGoldInMimic, ctx.Resources.DayQuota);
+            ctx.Resources.RestoreDayStart(daySnapshot);
+            BeginDay(firstDay: false);
         }
 
         private void Update()
         {
             var ctx = GameContext.Instance;
-            if (ctx == null || Hud == null || dayEnded) return;
+            if (ctx == null || Hud == null || Phase != DayPhase.Adventurers) return;
             bool advEmpty = ctx.AdventurerGrid.Model.FreeCellsCount == ctx.AdventurerGrid.Width * ctx.AdventurerGrid.Height;
             Hud.SetNextButtonEnabled(advEmpty);
         }

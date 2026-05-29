@@ -31,7 +31,7 @@ namespace Mimic.Game
             LootCatalog.Load();
             AdventurerCatalog.Load();
             DayConfig.Load();
-            Resources.StartDay(DayConfig.Current, true);
+            Resources.StartDay(DayConfig.Current, firstDay: true);
         }
 
         // If the scene-assembly step forgot to add a controller, attach it programmatically
