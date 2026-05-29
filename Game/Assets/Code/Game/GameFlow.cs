@@ -35,6 +35,7 @@ namespace Mimic.Game
             BeginDay(firstDay: true);
             Hud.NextButton.onClick.AddListener(NextOrEndDay);
             Hud.SurrenderButton.onClick.AddListener(() => SurrenderPopup.Show(EndBurst));
+            GameContext.Instance.GameFlowDeathHook = () => { if (Phase == DayPhase.Adventurers) EndDeath(); };
         }
 
         private void BeginDay(bool firstDay)
@@ -50,6 +51,7 @@ namespace Mimic.Game
             processed = 0;
             Hud.SetDayCounter(DayConfig.Current.Day);
             Hud.SetNextButtonLabel("Следующий!");
+            if (firstDay) ctx.SpawnFixtures(); // сердце/желудок ставятся один раз и живут в гриде мимика
             ctx.OnGridChanged();
             BringNext();
         }

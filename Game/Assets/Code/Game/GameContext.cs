@@ -20,6 +20,8 @@ namespace Mimic.Game
         public GameResources Resources { get; private set; } = new GameResources();
         public AdjacencyResult<LootView> LastResolved { get; private set; }
 
+        public System.Action GameFlowDeathHook; // GameFlow подписывается, чтобы ловить смерть от переваривания
+
         private void Awake()
         {
             Instance = this;
@@ -83,13 +85,38 @@ namespace Mimic.Game
 
         public void Digest(LootView item)
         {
+            if (item.Data.IsFixture) return;
             int cost = LastResolved != null ? LastResolved.GetAcid(item) : item.Data.AcidCost;
             if (Resources.CurrentAcid < cost) return;
             Resources.CurrentAcid -= cost;
-            Resources.CurrentHp += item.Data.HealOnDigest;
+            Resources.CurrentAcid += item.Data.AcidRestoreOnDigest; // кислота/мизим восполняет ЖС
+            Resources.CurrentHp += item.Data.HealOnDigest;          // бургер лечит
+            Resources.CurrentHp -= item.Data.DamageOnDigest;        // гиря/клей/какашка бьют
             MimicGrid.Model.Remove(item);
             Destroy(item.gameObject);
             OnGridChanged();
+            if (Resources.CurrentHp <= 0) GameFlowDeathHook?.Invoke();
+        }
+
+        public void SpawnFixtures()
+        {
+            PlaceFixture("heart", 0, MimicGrid.Height - 2);
+            PlaceFixture("stomach", MimicGrid.Width - 3, 1);
+        }
+
+        private void PlaceFixture(string id, int x, int y)
+        {
+            var data = LootCatalog.Get(id);
+            var view = SpawnLoot(data, MimicGrid.CellsRoot);
+            if (MimicGrid.Model.TryPlace(view, x, y, Rotation.Deg0))
+            {
+                var rt = (RectTransform)view.transform;
+                rt.SetParent(MimicGrid.CellsRoot, worldPositionStays: false);
+                rt.anchorMin = rt.anchorMax = new Vector2(0, 0);
+                rt.pivot = new Vector2(0, 0);
+                rt.position = MimicGrid.CellRects[x, y].position;
+            }
+            else Destroy(view.gameObject);
         }
 
         public LootView SpawnLoot(LootData data, Transform parent)

@@ -192,6 +192,9 @@ namespace Mimic.Input
 
         public void Pick(LootView item)
         {
+            if (item != null && item.Data != null && item.Data.IsFixture)
+                return; // сердце/желудок не двигаются
+
             var grid = FindGridContaining(item);
             if (grid == null)
             {
