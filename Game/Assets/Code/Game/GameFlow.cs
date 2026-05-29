@@ -35,7 +35,7 @@ namespace Mimic.Game
             BeginDay(firstDay: true);
             Hud.NextButton.onClick.AddListener(NextOrEndDay);
             Hud.SurrenderButton.onClick.AddListener(() => SurrenderPopup.Show(EndBurst));
-            GameContext.Instance.GameFlowDeathHook = () => { if (Phase == DayPhase.Adventurers) EndDeath(); };
+            GameContext.Instance.GameFlowDeathHook = () => EndDeath();
         }
 
         private void BeginDay(bool firstDay)
