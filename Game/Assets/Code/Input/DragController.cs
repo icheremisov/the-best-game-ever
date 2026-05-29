@@ -216,6 +216,20 @@ namespace Mimic.Input
                 pickOffsetY = clickY - originY;
             }
 
+            // TODO(jam): group-drag wiring — GlueGroup.Resolve(...) ready, apply block move here.
+            // The glued-group logic is implemented & tested in Mimic.Logic.GlueGroup. Full group
+            // drag would require tracking N held LootViews + per-member offsets, an N-cell hover
+            // highlight, and an all-or-nothing multi-place on drop (revert all if any member can't
+            // fit). That is a substantial restructuring of this single-Held drag model, so it's
+            // deferred to avoid regressing the working single-item path. Below we compute the group
+            // as a first, side-effect-free step so the block move can be hooked in here later.
+            if (grid == MimicGrid && item.Data != null)
+            {
+                var glueGroup = GlueGroup.Resolve(grid.Model, item, v => v.Data != null && v.Data.IsGlue);
+                if (glueGroup.Count > 1 && VerboseLogs)
+                    Debug.Log($"[Drag] glue group of {glueGroup.Count} detected on pick of {item.Data?.Id} (block move not yet wired)");
+            }
+
             grid.Model.Remove(item);
 
             ContextMenuController.Instance?.Close(); // close any open menu when starting a drag
