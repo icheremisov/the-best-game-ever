@@ -36,15 +36,24 @@ namespace Mimic.UI
 
         public void RefreshTexts()
         {
-            var r = GameContext.Instance.Resources;
-            if (GoldText != null) GoldText.text = $"{r.TotalGold}/{r.DayQuota}";
+            var ctx = GameContext.Instance;
+            var r = ctx.Resources;
+            int basket = 0;
+            foreach (var it in ctx.AdventurerGrid.Model.AllItems())
+                if (it.Data != null && !it.Data.IsFixture) basket += it.Data.Gold;
+            int previewTotal = r.TotalGold + basket;
+            if (GoldText != null) GoldText.text = $"Золото: {previewTotal} / {r.DayQuota}";
             if (TooltipText != null)
             {
-                int dmg = Settlement.Damage(r.TotalGold, r.DayQuota, DayConfig.Current.GoldDamageMult);
-                TooltipText.text = dmg > 0
-                    ? $"Потеря HP: -{dmg}\nПоследует наказание"
-                    : "Последует награда";
+                int dmg = Settlement.Damage(previewTotal, r.DayQuota, DayConfig.Current.GoldDamageMult);
+                TooltipText.text = dmg > 0 ? $"Не хватает! Потеря HP: -{dmg} — последует наказание" : "Квота закрыта — последует награда";
+                TooltipText.color = dmg > 0 ? new Color(0.9f,0.4f,0.4f) : new Color(0.5f,0.85f,0.5f);
             }
+        }
+
+        private void Update()
+        {
+            if (Root != null && Root.activeSelf) RefreshTexts();
         }
 
         private void OnSettleClicked()

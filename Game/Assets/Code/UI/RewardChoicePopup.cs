@@ -46,8 +46,21 @@ namespace Mimic.UI
             {
                 bool has = i < options.Count;
                 if (OptionButtons[i] != null) OptionButtons[i].gameObject.SetActive(has);
-                if (has && OptionLabels[i] != null) OptionLabels[i].text = options[i].Name;
+                if (has && OptionLabels[i] != null) OptionLabels[i].text = $"{options[i].Name}\n{EffectHint(options[i])}";
             }
+        }
+
+        private static string EffectHint(Mimic.Data.LootData d)
+        {
+            var parts = new System.Collections.Generic.List<string>();
+            if (d.HealOnDigest > 0) parts.Add($"+{d.HealOnDigest} HP при переваривании");
+            if (d.AcidRestoreOnDigest > 0) parts.Add($"+{d.AcidRestoreOnDigest} ЖС при переваривании");
+            if (d.DamageOnDigest > 0) parts.Add($"-{d.DamageOnDigest} HP при переваривании");
+            if (!d.CanReturnToBasket) parts.Add("нельзя сдать");
+            if (d.IsGlue) parts.Add("склеивает соседей");
+            if (d.NeighborGoldPct != 0) parts.Add($"{d.NeighborGoldPct}% золота соседям");
+            if (parts.Count == 0 && !string.IsNullOrEmpty(d.Description)) parts.Add(d.Description);
+            return string.Join(", ", parts);
         }
 
         private void Take(int idx)
