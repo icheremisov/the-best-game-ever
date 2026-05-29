@@ -52,6 +52,22 @@ namespace Mimic.Tests
         }
 
         [Test]
+        public void PickStealable_RespectsCanStealPredicate()
+        {
+            var grid = new GridModel<Item>(4, 1);
+            var keep = Mk("keep", "X");
+            var steal = Mk("steal", "X");
+            grid.TryPlace(keep, 0, 0, Rotation.Deg0);
+            grid.TryPlace(steal, 2, 0, Rotation.Deg0);
+            // canSteal excludes "keep" -> only "steal" is a candidate
+            for (int seed = 0; seed < 5; seed++)
+            {
+                var picked = TheftResolver.PickStealable(grid, i => i, seed, canSteal: it => it.Id != "keep");
+                Assert.AreSame(steal, picked);
+            }
+        }
+
+        [Test]
         public void PickStealable_Deterministic_WithSeed()
         {
             var grid = new GridModel<Item>(4, 1);

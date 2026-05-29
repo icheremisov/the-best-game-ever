@@ -52,7 +52,8 @@ namespace Mimic.UI
             var ctx = GameContext.Instance;
             ctx.BankAllInGrid(ctx.AdventurerGrid);
 
-            var stolen = TheftResolver.PickStealable(ctx.MimicGrid.Model, v => v, theftSeed++);
+            var stolen = TheftResolver.PickStealable(ctx.MimicGrid.Model, v => v, theftSeed++,
+                canSteal: v => !v.Data.IsFixture);
             if (stolen != null)
             {
                 ctx.MimicGrid.Model.Remove(stolen);
