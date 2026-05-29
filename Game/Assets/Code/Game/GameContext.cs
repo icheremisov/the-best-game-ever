@@ -83,11 +83,16 @@ namespace Mimic.Game
             if (Hud != null) Hud.Refresh();
         }
 
-        public void Digest(LootView item)
+        public void Digest(LootView item) => TryDigestHeld(item);
+
+        // Возвращает true если предмет переварен; false если не хватило ЖС (или это фикстура).
+        // Работает и для предмета, уже вынутого из грида (drag-to-digest): Model.Remove — no-op.
+        public bool TryDigestHeld(LootView item)
         {
-            if (item.Data.IsFixture) return;
-            int cost = LastResolved != null ? LastResolved.GetAcid(item) : item.Data.AcidCost;
-            if (Resources.CurrentAcid < cost) return;
+            if (item == null || item.Data == null || item.Data.IsFixture) return false;
+            int cost = item.Data.AcidCost;
+            if (LastResolved != null && LastResolved.EffectiveAcid.TryGetValue(item, out var a)) cost = a;
+            if (Resources.CurrentAcid < cost) return false;
             Resources.CurrentAcid -= cost;
             Resources.CurrentAcid += item.Data.AcidRestoreOnDigest; // кислота/мизим восполняет ЖС
             Resources.CurrentHp += item.Data.HealOnDigest;          // бургер лечит
@@ -96,6 +101,7 @@ namespace Mimic.Game
             Destroy(item.gameObject);
             OnGridChanged();
             if (Resources.CurrentHp <= 0) GameFlowDeathHook?.Invoke();
+            return true;
         }
 
         public void SpawnFixtures()
