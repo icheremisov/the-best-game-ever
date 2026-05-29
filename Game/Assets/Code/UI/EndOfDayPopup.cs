@@ -18,6 +18,7 @@ namespace Mimic.UI
 
         private Action primary, secondary, tertiary;
         private bool showing; // true пока попап вызван через Open — не даём Awake погасить себя
+        private bool styled;
 
         private void Awake()
         {
@@ -25,6 +26,60 @@ namespace Mimic.UI
         }
 
         public void Hide() => gameObject.SetActive(false);
+
+        // Стиль зашит в код: edit-time правки на prefab-инстансе откатывались, а часть
+        // лейблов оставалась с дефолтами (fs=14, LegacyRuntime, белый фон → невидимо).
+        // Делаем детерминированно при первом показе.
+        private static readonly Color BtnGreen = new Color(0.25f, 0.56f, 0.31f);
+        private static readonly Color BtnGray  = new Color(0.33f, 0.33f, 0.36f);
+        private static readonly Color BtnRed   = new Color(0.54f, 0.23f, 0.23f);
+        private static readonly Color BodyGray = new Color(0.85f, 0.85f, 0.88f);
+
+        private void ApplyStyle()
+        {
+            if (styled) return;
+            styled = true;
+
+            StyleText(TitleText, 40, true, Color.white);
+            StyleText(SubtitleText, 26, false, BodyGray);
+
+            StyleButton(PrimaryButton,   PrimaryLabel,   BtnGreen, -20f);
+            StyleButton(SecondaryButton, SecondaryLabel, BtnGray, -105f);
+            StyleButton(TertiaryButton,  TertiaryLabel,  BtnRed,  -190f);
+        }
+
+        private static void StyleText(Text t, int fontSize, bool bold, Color color)
+        {
+            if (t == null) return;
+            t.font = FontProvider.Default;
+            t.fontSize = fontSize;
+            t.fontStyle = bold ? FontStyle.Bold : FontStyle.Normal;
+            t.alignment = TextAnchor.MiddleCenter;
+            t.color = color;
+            t.raycastTarget = false;
+            t.horizontalOverflow = HorizontalWrapMode.Wrap;
+            t.verticalOverflow = VerticalWrapMode.Overflow;
+        }
+
+        private static void StyleButton(Button b, Text label, Color bg, float y)
+        {
+            if (b == null) return;
+            var img = b.GetComponent<Image>();
+            if (img != null) img.color = bg;
+            var brt = (RectTransform)b.transform;
+            brt.anchorMin = brt.anchorMax = brt.pivot = new Vector2(0.5f, 0.5f);
+            brt.anchoredPosition = new Vector2(0f, y);
+            brt.sizeDelta = new Vector2(480f, 72f);
+            if (label != null)
+            {
+                StyleText(label, 30, true, Color.white);
+                var lrt = (RectTransform)label.transform;
+                lrt.anchorMin = Vector2.zero;
+                lrt.anchorMax = Vector2.one;
+                lrt.offsetMin = Vector2.zero;
+                lrt.offsetMax = Vector2.zero;
+            }
+        }
 
         private void Bind(Button b, Text label, string text, Action cb, ref Action slot, bool visible)
         {
@@ -40,6 +95,7 @@ namespace Mimic.UI
         private void Open(string title, string subtitle)
         {
             showing = true;
+            ApplyStyle();
             if (TitleText != null) TitleText.text = title;
             if (SubtitleText != null) SubtitleText.text = subtitle;
             gameObject.SetActive(true);
