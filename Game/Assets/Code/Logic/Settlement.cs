@@ -9,8 +9,9 @@ namespace Mimic.Logic
         public static int Damage(int total, int quota, float mult)
         {
             int shortfall = quota - total;
-            if (shortfall <= 0) return 0;
-            return (int)Math.Ceiling(shortfall * mult);
+            if (shortfall <= 0 || mult <= 0f) return 0;
+            double raw = Math.Round(shortfall * (double)mult, 6);
+            return Math.Max(0, (int)Math.Ceiling(raw));
         }
 
         // До 3 различных элементов из пула (Fisher–Yates по копии).
