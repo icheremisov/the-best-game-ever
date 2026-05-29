@@ -23,6 +23,17 @@ namespace Mimic.Logic
             Func<T, string> adjacencyTargetOf,
             Func<T, AdjacencyEffect[]> adjacencyEffectsOf
         ) where T : class
+            => Resolve(grid, idOf, baseGoldOf, baseAcidOf, adjacencyTargetOf, adjacencyEffectsOf, _ => 0);
+
+        public static AdjacencyResult<T> Resolve<T>(
+            GridModel<T> grid,
+            Func<T, string> idOf,
+            Func<T, int> baseGoldOf,
+            Func<T, int> baseAcidOf,
+            Func<T, string> adjacencyTargetOf,
+            Func<T, AdjacencyEffect[]> adjacencyEffectsOf,
+            Func<T, int> neighborGoldPctOf
+        ) where T : class
         {
             var result = new AdjacencyResult<T>();
 
@@ -66,7 +77,20 @@ namespace Mimic.Logic
                 }
             }
 
-            // 3. Total
+            // 2b. Исходящий эффект: предмет с NeighborGoldPct != 0 снижает золото 4-соседей.
+            foreach (var src in grid.AllItems())
+            {
+                int pct = neighborGoldPctOf(src);
+                if (pct == 0) continue;
+                foreach (var nb in GetEdgeNeighbors(grid, src))
+                {
+                    if (ReferenceEquals(nb, src)) continue;
+                    int g = result.EffectiveGold[nb];
+                    result.EffectiveGold[nb] = (int)System.Math.Max(0, System.Math.Round(g * (1f + pct / 100f)));
+                }
+            }
+
+            // 3. Total (после исходящих эффектов)
             foreach (var v in result.EffectiveGold.Values) result.TotalGold += v;
             return result;
         }
