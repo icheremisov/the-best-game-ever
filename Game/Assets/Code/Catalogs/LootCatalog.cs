@@ -28,10 +28,35 @@ namespace Mimic.Catalogs
                     HealOnDigest = int.Parse(row[6]),
                     CellsRestoredOnDigest = int.Parse(row[7]),
                     AdjacencyTarget = row[8],
-                    AdjacencyEffects = AdjacencyEffect.ParseList(row[9])
+                    AdjacencyEffects = AdjacencyEffect.ParseList(row[9]),
+                    Category = ParseCategory(Col(row, 10, "normal")),
+                    AcidRestoreOnDigest = int.Parse(Col(row, 11, "0")),
+                    DamageOnDigest = int.Parse(Col(row, 12, "0")),
+                    CanReturnToBasket = Col(row, 13, "1") != "0",
+                    IsGlue = Col(row, 14, "0") == "1",
+                    NeighborGoldPct = int.Parse(Col(row, 15, "0")),
                 };
+                d.IsFixture = d.Category == LootCategory.Fixture;
                 _byId[d.Id] = d;
             }
+        }
+
+        private static string Col(System.Collections.Generic.IReadOnlyList<string> row, int i, string def)
+            => i < row.Count && !string.IsNullOrEmpty(row[i]) ? row[i] : def;
+
+        private static LootCategory ParseCategory(string s) => s switch
+        {
+            "reward"  => LootCategory.Reward,
+            "punish"  => LootCategory.Punish,
+            "fixture" => LootCategory.Fixture,
+            _          => LootCategory.Normal,
+        };
+
+        public static System.Collections.Generic.List<LootData> ByCategory(LootCategory cat)
+        {
+            var list = new System.Collections.Generic.List<LootData>();
+            foreach (var d in _byId.Values) if (d.Category == cat) list.Add(d);
+            return list;
         }
 
         public static LootData Get(string id) => _byId[id];
