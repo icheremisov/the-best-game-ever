@@ -99,5 +99,31 @@ namespace Mimic.Game
             view.Bind(data);
             return view;
         }
+
+        // Сдать предмет Властелину: золото (с adjacency) -> BankedGold, предмет удаляется.
+        public void BankItem(LootView item)
+        {
+            if (item.Data.IsFixture) return;
+            int gold = LastResolved != null ? LastResolved.GetGold(item) : item.Data.Gold;
+            Resources.BankedGold += gold;
+            MimicGrid.Model.Remove(item);
+            Destroy(item.gameObject);
+        }
+
+        // Сдать всё, что игрок переложил в правый (корзинный) грид.
+        public int BankAllInGrid(GridView basket)
+        {
+            int total = 0;
+            var items = new System.Collections.Generic.List<LootView>(basket.Model.AllItems());
+            foreach (var it in items)
+            {
+                if (it.Data.IsFixture) continue;
+                total += it.Data.Gold;
+                Resources.BankedGold += it.Data.Gold;
+                basket.Model.Remove(it);
+                Destroy(it.gameObject);
+            }
+            return total;
+        }
     }
 }
