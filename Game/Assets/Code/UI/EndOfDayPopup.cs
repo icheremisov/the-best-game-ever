@@ -17,8 +17,12 @@ namespace Mimic.UI
         public Text TertiaryLabel;
 
         private Action primary, secondary, tertiary;
+        private bool showing; // true пока попап вызван через Open — не даём Awake погасить себя
 
-        private void Awake() => gameObject.SetActive(false);
+        private void Awake()
+        {
+            if (!showing) gameObject.SetActive(false);
+        }
 
         public void Hide() => gameObject.SetActive(false);
 
@@ -35,6 +39,7 @@ namespace Mimic.UI
 
         private void Open(string title, string subtitle)
         {
+            showing = true;
             if (TitleText != null) TitleText.text = title;
             if (SubtitleText != null) SubtitleText.text = subtitle;
             gameObject.SetActive(true);

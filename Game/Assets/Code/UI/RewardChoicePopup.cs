@@ -20,10 +20,11 @@ namespace Mimic.UI
         private Action onOvereat;
         private List<LootData> options;
         private int pickSeed = 1;
+        private bool showing; // true пока попап вызван через Show — не даём Awake погасить себя
 
         private void Awake()
         {
-            if (Root != null) Root.SetActive(false);
+            if (!showing && Root != null) Root.SetActive(false);
             for (int i = 0; i < OptionButtons.Length; i++)
             {
                 int idx = i;
@@ -34,6 +35,7 @@ namespace Mimic.UI
 
         public void Show(bool win, Action onTaken, Action onOvereat)
         {
+            showing = true;
             this.onTaken = onTaken;
             this.onOvereat = onOvereat;
 
