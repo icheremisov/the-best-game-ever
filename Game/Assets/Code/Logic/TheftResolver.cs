@@ -23,12 +23,13 @@ namespace Mimic.Logic
             return false;
         }
 
-        // Случайный предмет со свободной верхней гранью, либо null.
-        public static T PickStealable<T>(GridModel<T> grid, Func<T, T> id, int seed) where T : class
+        // Случайный предмет со свободной верхней гранью, удовлетворяющий canSteal (если задан), либо null.
+        public static T PickStealable<T>(GridModel<T> grid, Func<T, T> id, int seed, Func<T, bool> canSteal = null) where T : class
         {
             var candidates = new List<T>();
             foreach (var item in grid.AllItems())
-                if (HasFreeTopEdge(grid, item, id)) candidates.Add(item);
+                if ((canSteal == null || canSteal(item)) && HasFreeTopEdge(grid, item, id))
+                    candidates.Add(item);
             if (candidates.Count == 0) return null;
             var rng = new Random(seed);
             return candidates[rng.Next(candidates.Count)];
