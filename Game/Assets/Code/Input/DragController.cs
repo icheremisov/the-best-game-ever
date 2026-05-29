@@ -66,14 +66,12 @@ namespace Mimic.Input
             var mouse = Mouse.current;
             if (mouse == null) return;
 
-            // --- Not holding anything: handle RMB → context menu / LMB → close menu ---
-            // Done via direct Mouse polling because InputSystemUIInputModule may not
-            // forward right-clicks as pointer events depending on its action config.
+            // --- Not holding anything ---
+            // Переваривание теперь только через зону "Переварить" (drag), контекстного
+            // меню по ПКМ больше нет.
             if (Held == null)
             {
                 HideDigestZone();
-                if (mouse.rightButton.wasPressedThisFrame)
-                    HandleRightClickIdle(mouse.position.ReadValue());
                 return;
             }
 
@@ -216,24 +214,6 @@ namespace Mimic.Input
                     pickOffsetY * worldCellSize,
                     0);
             }
-        }
-
-        // RMB while not holding: open the context menu for the item under the cursor
-        // (mimic grid only — handled by ContextMenuController.Open). Clicking empty
-        // space closes any open menu.
-        private void HandleRightClickIdle(Vector2 screenPos)
-        {
-            if (MimicGrid != null && MimicGrid.ScreenToCell(screenPos, UiCamera, out int x, out int y))
-            {
-                var item = MimicGrid.Model.GetAt(x, y);
-                if (item != null)
-                {
-                    if (VerboseLogs) Debug.Log($"[Drag] RMB context menu for {item.Data?.Id} at ({x},{y})");
-                    ContextMenuController.Instance?.Open(item);
-                    return;
-                }
-            }
-            ContextMenuController.Instance?.Close();
         }
 
         public void OnLootClicked(LootView item)
