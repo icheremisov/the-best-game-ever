@@ -27,6 +27,13 @@ namespace Mimic.Input
 
         public LootView Held { get; private set; }
 
+        // Зона "Переварить" поверх ЖС-бара — видна только во время перетаскивания.
+        private RectTransform digestZone;
+        private UnityEngine.UI.Image digestImg;
+        private bool overDigest;
+        private static readonly Color DigestIdleColor = new Color(0.30f, 0.85f, 0.45f, 0.30f);
+        private static readonly Color DigestHotColor  = new Color(0.35f, 1.00f, 0.50f, 0.78f);
+
         private GridView originGrid;
         private int originX, originY;
         private Rotation originRot;
@@ -64,6 +71,7 @@ namespace Mimic.Input
             // forward right-clicks as pointer events depending on its action config.
             if (Held == null)
             {
+                HideDigestZone();
                 if (mouse.rightButton.wasPressedThisFrame)
                     HandleRightClickIdle(mouse.position.ReadValue());
                 return;
@@ -71,18 +79,52 @@ namespace Mimic.Input
 
             var mouseScreen = mouse.position.ReadValue();
 
-            UpdateHighlight(mouseScreen);
-            FollowCursor(mouseScreen);
+            // Зона "Переварить" активна только пока что-то перетаскиваем.
+            EnsureDigestZone();
+            if (digestZone != null) digestZone.gameObject.SetActive(true);
+            overDigest = digestZone != null
+                && RectTransformUtility.RectangleContainsScreenPoint(digestZone, mouseScreen, UiCamera);
+            if (digestImg != null) digestImg.color = overDigest ? DigestHotColor : DigestIdleColor;
 
-            // Standard drag&drop: Pick happens on mouse-down (via EventSystem → OnPointerDown).
-            // Drop happens on mouse-UP — release the button anywhere to commit or cancel.
+            if (overDigest)
+            {
+                // Над зоной переваривания: грид не подсвечиваем, предмет следует за курсором.
+                Held.ClearAllHighlights();
+                hoverGrid = null;
+                FollowCursor(mouseScreen);
+            }
+            else
+            {
+                UpdateHighlight(mouseScreen);
+                FollowCursor(mouseScreen);
+            }
+
+            // Drop on mouse-UP — release anywhere to digest / place / cancel.
             if (mouse.leftButton.wasReleasedThisFrame)
             {
-                if (hoverGrid != null && hoverCanPlace)
+                if (overDigest)
+                {
+                    var item = Held;
+                    Held.ClearAllHighlights();
+                    if (GameContext.Instance != null && GameContext.Instance.TryDigestHeld(item))
+                    {
+                        if (VerboseLogs) Debug.Log($"[Drag] DIGEST {item.Data?.Id}");
+                        Held = null;
+                        hoverGrid = null;
+                    }
+                    else
+                    {
+                        if (VerboseLogs) Debug.Log("[Drag] DIGEST failed (не хватает ЖС) → возврат к origin");
+                        Cancel();
+                    }
+                    HideDigestZone();
+                }
+                else if (hoverGrid != null && hoverCanPlace)
                 {
                     if (VerboseLogs)
                         Debug.Log($"[Drag] DROP release → {hoverGrid.name} cell=({hoverX},{hoverY}) rot={Held.CurrentRotation}");
                     TryDropAt(hoverGrid, hoverX, hoverY);
+                    HideDigestZone();
                 }
                 else
                 {
@@ -90,6 +132,7 @@ namespace Mimic.Input
                     if (VerboseLogs)
                         Debug.Log($"[Drag] DROP invalid → return to origin (hover={(hoverGrid != null ? hoverGrid.name : "none")} canPlace={hoverCanPlace})");
                     Cancel();
+                    HideDigestZone();
                 }
             }
             else if (mouse.rightButton.wasPressedThisFrame)
@@ -97,7 +140,55 @@ namespace Mimic.Input
                 // RMB during hold = explicit cancel.
                 if (VerboseLogs) Debug.Log("[Drag] CANCEL via RMB");
                 Cancel();
+                HideDigestZone();
             }
+        }
+
+        private void HideDigestZone()
+        {
+            if (digestZone != null) digestZone.gameObject.SetActive(false);
+        }
+
+        // Создаёт оверлей "ПЕРЕВАРИТЬ" поверх ЖС-бара один раз (рантайм, без правок сцены).
+        private void EnsureDigestZone()
+        {
+            if (digestZone != null) return;
+            var hud = GameContext.Instance != null ? GameContext.Instance.Hud : null;
+            if (hud == null || hud.AcidBar == null) return;
+
+            var go = new GameObject("DigestDropZone",
+                typeof(RectTransform), typeof(CanvasRenderer), typeof(UnityEngine.UI.Image));
+            digestZone = (RectTransform)go.transform;
+            digestZone.SetParent(hud.AcidBar.transform, worldPositionStays: false);
+            digestZone.anchorMin = new Vector2(0f, 0f);
+            digestZone.anchorMax = new Vector2(1f, 1f);
+            digestZone.offsetMin = new Vector2(0f, 0f);
+            digestZone.offsetMax = new Vector2(0f, 70f); // чуть выше бара — крупнее цель
+            digestImg = go.GetComponent<UnityEngine.UI.Image>();
+            digestImg.color = DigestIdleColor;
+            digestImg.raycastTarget = false; // хит-тест делаем вручную
+
+            var lblGo = new GameObject("Label",
+                typeof(RectTransform), typeof(CanvasRenderer), typeof(UnityEngine.UI.Text));
+            var lrt = (RectTransform)lblGo.transform;
+            lrt.SetParent(digestZone, worldPositionStays: false);
+            lrt.anchorMin = Vector2.zero;
+            lrt.anchorMax = Vector2.one;
+            lrt.offsetMin = Vector2.zero;
+            lrt.offsetMax = Vector2.zero;
+            var lbl = lblGo.GetComponent<UnityEngine.UI.Text>();
+            lbl.text = "ПЕРЕВАРИТЬ";
+            lbl.font = FontProvider.Default;
+            lbl.fontSize = 24;
+            lbl.fontStyle = FontStyle.Bold;
+            lbl.alignment = TextAnchor.MiddleCenter;
+            lbl.color = Color.white;
+            lbl.raycastTarget = false;
+            var outline = lblGo.AddComponent<UnityEngine.UI.Outline>();
+            outline.effectColor = Color.black;
+            outline.effectDistance = new Vector2(2f, -2f);
+
+            digestZone.gameObject.SetActive(false);
         }
 
         private void FollowCursor(Vector2 mouseScreen)
