@@ -18,15 +18,17 @@ namespace Mimic.UI
 
         private Action onSettled;
         private int theftSeed = 1;
+        private bool showing; // true пока попап вызван через Show — не даём Awake погасить себя
 
         private void Awake()
         {
-            if (Root != null) Root.SetActive(false);
+            if (!showing && Root != null) Root.SetActive(false);
             if (SettleButton != null) SettleButton.onClick.AddListener(OnSettleClicked);
         }
 
         public void Show(Action settledCallback)
         {
+            showing = true;
             onSettled = settledCallback;
             if (Root != null) Root.SetActive(true);
             if (TitleText != null) TitleText.text = "Властелин пришёл";

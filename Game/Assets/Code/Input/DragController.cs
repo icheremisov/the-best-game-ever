@@ -273,9 +273,18 @@ namespace Mimic.Input
             if (hoverGrid != null && hoverCanPlace) TryDropAt(hoverGrid, hoverX, hoverY);
         }
 
+        private Mimic.Game.GameFlow flowCache;
+        private bool IsOverlordPhase()
+        {
+            if (flowCache == null) flowCache = UnityEngine.Object.FindFirstObjectByType<Mimic.Game.GameFlow>();
+            return flowCache != null && flowCache.Phase == Mimic.Game.DayPhase.Overlord;
+        }
+
         private void TryDropAt(GridView grid, int x, int y)
         {
-            if (grid == AdventurerGrid && originGrid == MimicGrid)
+            // В обычной фазе нельзя возвращать лут из мимика в грид приключенца.
+            // В фазе Властелина правый грид — это КОРЗИНА, туда сдавать можно.
+            if (grid == AdventurerGrid && originGrid == MimicGrid && !IsOverlordPhase())
             {
                 if (VerboseLogs) Debug.Log("[Drag] DROP rejected — can't move from mimic to adventurer grid");
                 return;
