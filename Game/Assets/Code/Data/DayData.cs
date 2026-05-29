@@ -7,5 +7,7 @@ namespace Mimic.Data
         public int StartHp;
         public int StartAcid;
         public string[] AdventurerIds;
+        public float GoldDamageMult;
+        public int RansomGold;
     }
 }
