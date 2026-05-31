@@ -30,6 +30,9 @@ namespace Mimic.Catalogs
                     AdventurerIds = r[4].Split(';'),
                     GoldDamageMult = r.Length > 5 && !string.IsNullOrEmpty(r[5]) ? float.Parse(r[5], System.Globalization.CultureInfo.InvariantCulture) : 1f,
                     RansomGold = r.Length > 6 && !string.IsNullOrEmpty(r[6]) ? int.Parse(r[6]) : 999999,
+                    OverlordHp = r.Length > 7 && !string.IsNullOrEmpty(r[7]) ? int.Parse(r[7]) : 20,
+                    OverlordAttack = r.Length > 8 && !string.IsNullOrEmpty(r[8]) ? int.Parse(r[8]) : 2,
+                    BiteDamage = r.Length > 9 && !string.IsNullOrEmpty(r[9]) ? int.Parse(r[9]) : 2,
                 });
             }
             _index = 0;

@@ -34,6 +34,8 @@ namespace Mimic.Catalogs
                     CanReturnToBasket = Col(row, 12, "1") != "0",
                     IsGlue = Col(row, 13, "0") == "1",
                     NeighborGoldPct = int.Parse(Col(row, 14, "0")),
+                    Attack = int.Parse(Col(row, 15, "0")),
+                    AttackOnDigest = int.Parse(Col(row, 16, "0")),
                 };
                 d.IsFixture = d.Category == LootCategory.Fixture;
                 _byId[d.Id] = d;
