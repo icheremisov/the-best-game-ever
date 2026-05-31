@@ -30,7 +30,7 @@ namespace Mimic.UI
         {
             if (Panel != null && DigestButton != null && DigestLabel != null) return;
 
-            if (HostCanvas == null) HostCanvas = FindObjectOfType<Canvas>();
+            if (HostCanvas == null) HostCanvas = FindFirstObjectByType<Canvas>();
             if (HostCanvas == null) return;
 
             if (Panel == null)
