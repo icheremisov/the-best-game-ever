@@ -26,12 +26,14 @@ namespace Mimic.UI
             if (!showing) gameObject.SetActive(false);
         }
 
-        public void Show(AdventurerData data, Action onEatCallback)
+        public void Show(AdventurerData data, Action onEatCallback, string eatLabel = "Сожрать")
         {
             showing = true;
             if (NameText != null) NameText.text = data.Name;
             if (PhraseText != null) PhraseText.text = data.Phrase;
             onEat = onEatCallback;
+            if (EatButton != null)
+                PopupHelpers.EnsureButtonLabel(EatButton, eatLabel, 28);
             gameObject.SetActive(true);
         }
     }

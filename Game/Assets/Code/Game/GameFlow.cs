@@ -7,7 +7,7 @@ using Mimic.UI;
 
 namespace Mimic.Game
 {
-    public enum DayPhase { Adventurers, Overlord, RewardChoice, Transition }
+    public enum DayPhase { Adventurers, Overlord, RewardChoice, Transition, Combat }
 
     public class GameFlow : MonoBehaviour
     {
@@ -69,7 +69,10 @@ namespace Mimic.Game
             current = AdventurerCatalog.Get(id);
             processed++;
             Hud.SetHeroCounter(processed, totalInDay);
-            IntroPopup.Show(current, OnEatPressed);
+            if (current.Battle)
+                IntroPopup.Show(current, OnBattlePressed, eatLabel: "В бой");
+            else
+                IntroPopup.Show(current, OnEatPressed);
         }
 
         private void OnEatPressed()
@@ -87,6 +90,19 @@ namespace Mimic.Game
             }
             Hud.SetNextButtonEnabled(false);
             ctx.OnGridChanged();
+        }
+
+        private void OnBattlePressed()
+        {
+            Phase = DayPhase.Combat;
+            var enemy = Mimic.Data.CombatEnemy.FromAdventurer(current);
+            CombatController.Instance.StartCombat(enemy, onWin: OnBattleWon, onLose: EndDeath);
+        }
+
+        private void OnBattleWon()
+        {
+            Phase = DayPhase.Adventurers;
+            OnEatPressed(); // лут побеждённого приключенца падает в правую сетку
         }
 
         public static bool TryPlaceFirstFit(GridView grid, LootView view)
@@ -157,7 +173,7 @@ namespace Mimic.Game
                 canRansom: canRansom,
                 onNextDay: GoNextDay,
                 onRansom: EndRansomWin,
-                onChallenge: EndChallengeStub);
+                onChallenge: OnChallengeOverlord);
         }
 
         private void GoNextDay()
@@ -167,7 +183,17 @@ namespace Mimic.Game
         }
 
         private void EndRansomWin() => EndPopup.ShowRansomWin();
-        private void EndChallengeStub() => EndPopup.ShowChallengeStub();
+
+        private void OnChallengeOverlord()
+        {
+            EndPopup.Hide();
+            Phase = DayPhase.Combat;
+            var enemy = Mimic.Data.CombatEnemy.FromOverlord(DayConfig.Current);
+            CombatController.Instance.StartCombat(
+                enemy,
+                onWin: () => EndPopup.ShowRansomWin(),
+                onLose: EndDeath);
+        }
 
         private void EndDeath()
         {
