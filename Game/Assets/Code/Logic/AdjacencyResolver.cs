@@ -118,6 +118,42 @@ namespace Mimic.Logic
             return false;
         }
 
+        // id различных предметов, ортогонально прилегающих к item (по тестируемой геометрии).
+        public static HashSet<string> NeighborIds<T>(GridModel<T> grid, T item, Func<T, string> idOf) where T : class
+        {
+            var ids = new HashSet<string>();
+            foreach (var n in GetEdgeNeighbors(grid, item)) ids.Add(idOf(n));
+            return ids;
+        }
+
+        // Для каждого правила — активно ли оно при данных соседях (есть подходящий сосед),
+        // НЕЗАВИСИМО от того, изменилась ли итоговая цена/стоимость. Используется тултипом.
+        public static bool[] ActiveRules(AdjacencyRule[] rules, ICollection<string> neighborIds)
+        {
+            if (rules == null) return Array.Empty<bool>();
+
+            // множество явно названных таргетов (для вайлдкарда) — как в Resolve
+            var named = new HashSet<string>();
+            foreach (var rule in rules)
+                if (!rule.Wildcard && rule.Targets != null)
+                    foreach (var t in rule.Targets) named.Add(t);
+
+            var active = new bool[rules.Length];
+            if (neighborIds == null) return active;
+
+            for (int i = 0; i < rules.Length; i++)
+            {
+                var rule = rules[i];
+                if (rule.Effects == null || rule.Effects.Length == 0) continue;
+                foreach (var nid in neighborIds)
+                {
+                    bool match = rule.Wildcard ? !named.Contains(nid) : ContainsId(rule.Targets, nid);
+                    if (match) { active[i] = true; break; }
+                }
+            }
+            return active;
+        }
+
         // Различные предметы-инстансы, ортогонально прилегающие к item.
         // Геометрия «какие клетки проверять» вынесена в GridGeometry.BorderCells (покрыта тестами).
         private static HashSet<T> GetEdgeNeighbors<T>(GridModel<T> grid, T item) where T : class

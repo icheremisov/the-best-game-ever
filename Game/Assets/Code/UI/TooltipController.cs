@@ -4,6 +4,7 @@ using UnityEngine.UI;
 using Mimic.Catalogs;
 using Mimic.Data;
 using Mimic.Game;
+using Mimic.Logic;
 
 namespace Mimic.UI
 {
@@ -208,7 +209,13 @@ namespace Mimic.UI
             GoldText.text = FormatStat("Цена", data.Gold, effGold, "зол.", betterIsHigher: true);
             AcidText.text = FormatStat("Переварить", data.AcidCost, effAcid, "сока", betterIsHigher: false);
 
-            string adjacencyDesc = DescribeAdjacency(data);
+            var ctx = GameContext.Instance;
+            var neighborIds = (inMimic && ctx != null && ctx.MimicGrid != null && ctx.MimicGrid.Model != null)
+                ? AdjacencyResolver.NeighborIds(ctx.MimicGrid.Model, item, v => v.Data.Id)
+                : new System.Collections.Generic.HashSet<string>();
+            bool[] activeRules = AdjacencyResolver.ActiveRules(data.AdjacencyRules, neighborIds);
+
+            string adjacencyDesc = DescribeAdjacency(data, activeRules);
             if (string.IsNullOrEmpty(adjacencyDesc))
             {
                 AdjacencyText.gameObject.SetActive(false);
@@ -216,9 +223,8 @@ namespace Mimic.UI
             else
             {
                 AdjacencyText.gameObject.SetActive(true);
-                bool active = inMimic && AdjacencyActive(item);
-                AdjacencyText.text = (active ? "✓ " : "○ ") + adjacencyDesc;
-                AdjacencyText.color = active ? BoostColor : Color.gray;
+                AdjacencyText.text = adjacencyDesc;
+                AdjacencyText.color = Color.white; // подсветка задаётся пер-правилом через rich text
             }
 
             // First-frame placement (LateUpdate will keep it pinned every frame after).
@@ -235,14 +241,21 @@ namespace Mimic.UI
             return $"{label}: <color=#{color}>{effective}</color> {unit} <color=#888888>(база {baseVal})</color>";
         }
 
-        private string DescribeAdjacency(LootData data)
+        // active[i] — активно ли правило i по фактическим соседям (есть подходящий сосед),
+        // независимо от того, изменилась ли итоговая цена. Каждый блок подсвечивается отдельно.
+        private string DescribeAdjacency(LootData data, bool[] active)
         {
             if (data.AdjacencyRules == null || data.AdjacencyRules.Length == 0) return "";
 
+            string boostHex = ColorUtility.ToHtmlStringRGB(BoostColor);
+            const string grayHex = "888888";
+
             var sb = new StringBuilder();
-            foreach (var rule in data.AdjacencyRules)
+            for (int ri = 0; ri < data.AdjacencyRules.Length; ri++)
             {
+                var rule = data.AdjacencyRules[ri];
                 if (rule.Effects == null || rule.Effects.Length == 0) continue;
+                bool on = active != null && ri < active.Length && active[ri];
                 if (sb.Length > 0) sb.Append('\n');
 
                 string who;
@@ -256,8 +269,10 @@ namespace Mimic.UI
                     for (int i = 0; i < rule.Targets.Length; i++) names[i] = LookupName(rule.Targets[i]);
                     who = "«" + string.Join("» или «", names) + "»";
                 }
-                sb.Append($"Рядом с {who}:");
 
+                string hex = on ? boostHex : grayHex;
+                string mark = on ? "✓" : "○";
+                sb.Append($"<color=#{hex}>{mark} Рядом с {who}:");
                 foreach (var fx in rule.Effects)
                 {
                     string kind = fx.Type == EffectType.Gold ? "цена" : "стоимость переваривания";
@@ -266,6 +281,7 @@ namespace Mimic.UI
                     string per = fx.Stackable ? " за каждый" : "";
                     sb.Append($"\n   • {kind} {sign}{pct}%{per}");
                 }
+                sb.Append("</color>");
             }
             return sb.ToString();
         }
@@ -282,15 +298,6 @@ namespace Mimic.UI
             if (ctx == null || ctx.MimicGrid == null) return false;
             foreach (var i in ctx.MimicGrid.Model.AllItems()) if (i == item) return true;
             return false;
-        }
-
-        private static bool AdjacencyActive(LootView item)
-        {
-            var resolved = GameContext.Instance?.LastResolved;
-            if (resolved == null) return false;
-            int g = resolved.GetGold(item);
-            int a = resolved.GetAcid(item);
-            return g != item.Data.Gold || a != item.Data.AcidCost;
         }
 
         private static readonly Color[] HashPalette =
