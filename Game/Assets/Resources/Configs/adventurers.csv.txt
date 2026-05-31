@@ -1,4 +1,5 @@
-id,name,phrase,lootIds
-warrior,Воин,definitely not a mimic!,sword;shield;bread
-rogue,Плут,я просто посмотрю,gem;gem;bread;barracuda
-mage,Маг,что в этом сундуке?,gem;shield;bread
+id,name,phrase,lootIds,battle,hp,attack
+warrior,Воин,definitely not a mimic!,sword;shield;bread,0,0,0
+rogue,Плут,я просто посмотрю,gem;gem;bread;barracuda,0,0,0
+mage,Маг,что в этом сундуке?,gem;shield;bread,0,0,0
+dragon,Дракончик,попробуй проглоти МЕНЯ,gem;gem;sword,1,12,2
