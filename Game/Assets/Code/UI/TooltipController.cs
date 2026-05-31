@@ -47,7 +47,7 @@ namespace Mimic.UI
         {
             if (Panel != null) return;
 
-            if (HostCanvas == null) HostCanvas = FindObjectOfType<Canvas>();
+            if (HostCanvas == null) HostCanvas = FindFirstObjectByType<Canvas>();
             if (HostCanvas == null)
             {
                 Debug.LogWarning("[Tooltip] No Canvas in scene — tooltip won't render");
