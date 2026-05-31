@@ -118,28 +118,24 @@ namespace Mimic.Logic
             return false;
         }
 
+        // Различные предметы-инстансы, ортогонально прилегающие к item.
+        // Геометрия «какие клетки проверять» вынесена в GridGeometry.BorderCells (покрыта тестами).
         private static HashSet<T> GetEdgeNeighbors<T>(GridModel<T> grid, T item) where T : class
         {
-            var seen = new HashSet<T>();
+            // 1. клетки, занятые предметом
+            var cells = new List<(int x, int y)>();
             for (int x = 0; x < grid.Width; x++)
-            {
                 for (int y = 0; y < grid.Height; y++)
-                {
-                    if (!ReferenceEquals(grid.GetAt(x, y), item)) continue;
-                    TryAddNeighbor(grid, x + 1, y, item, seen);
-                    TryAddNeighbor(grid, x - 1, y, item, seen);
-                    TryAddNeighbor(grid, x, y + 1, item, seen);
-                    TryAddNeighbor(grid, x, y - 1, item, seen);
-                }
+                    if (ReferenceEquals(grid.GetAt(x, y), item)) cells.Add((x, y));
+
+            // 2. предметы в граничных клетках (различные инстансы, кроме самого item)
+            var seen = new HashSet<T>();
+            foreach (var (bx, by) in GridGeometry.BorderCells(cells))
+            {
+                var n = grid.GetAt(bx, by);
+                if (n != null && !ReferenceEquals(n, item)) seen.Add(n);
             }
             return seen;
-        }
-
-        private static void TryAddNeighbor<T>(GridModel<T> grid, int x, int y, T self, HashSet<T> set) where T : class
-        {
-            var n = grid.GetAt(x, y);
-            if (n == null || ReferenceEquals(n, self)) return;
-            set.Add(n);
         }
     }
 }
