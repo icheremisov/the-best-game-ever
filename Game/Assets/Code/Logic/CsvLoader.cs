@@ -61,7 +61,8 @@ namespace Mimic.Logic
 
         // Splits the whole text into records of fields in a single quote-aware pass.
         // A newline outside quotes ends a record; inside quotes it is part of the field.
-        private static List<string[]> ParseRecords(string text)
+        // Public so tools (e.g. the loot importer) can access the header and raw records.
+        public static List<string[]> ParseRecords(string text)
         {
             text = text.Replace("\r\n", "\n").Replace('\r', '\n');
 
