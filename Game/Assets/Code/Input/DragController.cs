@@ -84,9 +84,10 @@ namespace Mimic.Input
                 && RectTransformUtility.RectangleContainsScreenPoint(digestZone, mouseScreen, UiCamera);
             if (digestImg != null) digestImg.color = overDigest ? DigestHotColor : DigestIdleColor;
 
-            if (overDigest)
+            bool overAttack = !overDigest && IsOverAttackZone(mouseScreen);
+            if (overDigest || overAttack)
             {
-                // Над зоной переваривания: грид не подсвечиваем, предмет следует за курсором.
+                // Над зоной переваривания/атаки: грид не подсвечиваем, предмет следует за курсором.
                 Held.ClearAllHighlights();
                 hoverGrid = null;
                 FollowCursor(mouseScreen);
@@ -113,6 +114,26 @@ namespace Mimic.Input
                     else
                     {
                         if (VerboseLogs) Debug.Log("[Drag] DIGEST failed (не хватает ЖС) → возврат к origin");
+                        Cancel();
+                    }
+                    HideDigestZone();
+                }
+                else if (IsOverAttackZone(mouseScreen))
+                {
+                    var item = Held;
+                    Held.ClearAllHighlights();
+                    var combat = Mimic.Game.CombatController.Instance;
+                    if (combat != null && combat.TryAttackWith(item))
+                    {
+                        if (VerboseLogs) Debug.Log($"[Drag] ATTACK with {item.Data?.Id}");
+                        GameContext.Instance?.DestroyAttackedItem(item);
+                        Held = null;
+                        hoverGrid = null;
+                    }
+                    else
+                    {
+                        // предмет без атаки (или не наш ход) — вернуть на место
+                        if (VerboseLogs) Debug.Log("[Drag] ATTACK rejected (нет attack / не ход) → возврат к origin");
                         Cancel();
                     }
                     HideDigestZone();
@@ -145,6 +166,13 @@ namespace Mimic.Input
         private void HideDigestZone()
         {
             if (digestZone != null) digestZone.gameObject.SetActive(false);
+        }
+
+        private bool IsOverAttackZone(Vector2 mouseScreen)
+        {
+            var combat = Mimic.Game.CombatController.Instance;
+            if (combat == null || !combat.IsActive || combat.AttackZone == null) return false;
+            return RectTransformUtility.RectangleContainsScreenPoint(combat.AttackZone, mouseScreen, UiCamera);
         }
 
         // Создаёт оверлей "ПЕРЕВАРИТЬ" поверх ЖС-бара один раз (рантайм, без правок сцены).

@@ -101,6 +101,7 @@ namespace Mimic.Game
             Resources.CurrentAcid += item.Data.AcidRestoreOnDigest; // кислота/мизим восполняет ЖС
             Resources.CurrentHp += item.Data.HealOnDigest;          // бургер лечит
             Resources.CurrentHp -= item.Data.DamageOnDigest;        // гиря/клей/какашка бьют
+            CombatController.Instance?.OnItemDigested(item.Data);
             MimicGrid.Model.Remove(item);
             Destroy(item.gameObject);
             OnGridChanged();
@@ -161,6 +162,12 @@ namespace Mimic.Game
                 Destroy(it.gameObject);
             }
             return total;
+        }
+
+        // Предмет, проатаковавший врага, исчезает (он уже снят с грида при Pick).
+        public void DestroyAttackedItem(LootView item)
+        {
+            if (item != null) Destroy(item.gameObject);
         }
     }
 }
