@@ -40,11 +40,11 @@ namespace Mimic.Game
             Instance = this;
         }
 
-        public void StartCombat(CombatEnemy e, Action win, Action lose)
+        public void StartCombat(CombatEnemy e, Action onWin, Action onLose)
         {
             enemy = e;
-            onWin = win;
-            onLose = lose;
+            this.onWin = onWin;
+            this.onLose = onLose;
             IsActive = true;
             PlayerTurn = false;
 
@@ -128,6 +128,7 @@ namespace Mimic.Game
             if (!IsActive) return;
             IsActive = false;
             PlayerTurn = false;
+            StopAllCoroutines(); // погасить флеш и любой отложенный ход врага
             if (panelGo != null) panelGo.SetActive(false);
 
             var ctx = GameContext.Instance;
