@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 
 namespace Mimic.Data
 {
@@ -9,47 +8,44 @@ namespace Mimic.Data
     {
         public EffectType Type;
         public float Multiplier; // +0.5 = +50%, -0.3 = -30%
+        public bool Stackable;   // '*' суффикс: применять за каждый прилегающий инстанс
 
-        public static AdjacencyEffect[] ParseList(string raw)
+        // Парсит ОДИН эффект: '<type>:<sign?><n>%' с опциональным '*' в конце.
+        // Знак опционален: 'gold:5%' == 'gold:+5%'.
+        public static AdjacencyEffect Parse(string token)
         {
-            if (string.IsNullOrEmpty(raw)) return Array.Empty<AdjacencyEffect>();
-            var parts = raw.Split(';');
-            var result = new List<AdjacencyEffect>(parts.Length);
-            foreach (var part in parts)
+            token = token.Trim();
+
+            bool stackable = false;
+            if (token.EndsWith("*"))
             {
-                var trimmed = part.Trim();
-                if (trimmed.Length == 0) continue;
-                result.Add(ParseOne(trimmed));
+                stackable = true;
+                token = token.Substring(0, token.Length - 1).Trim();
             }
-            return result.ToArray();
-        }
 
-        private static AdjacencyEffect ParseOne(string token)
-        {
             int colon = token.IndexOf(':');
             if (colon <= 0 || colon == token.Length - 1)
-                throw new FormatException($"Effect must be '<type>:<sign><n>%': got '{token}'");
+                throw new FormatException($"Эффект должен быть '<type>:<sign><n>%': '{token}'");
 
             string typeStr = token.Substring(0, colon).Trim().ToLowerInvariant();
             EffectType type = typeStr switch
             {
                 "gold" => EffectType.Gold,
                 "acid" => EffectType.Acid,
-                _ => throw new FormatException($"Unknown effect type '{typeStr}'")
+                _ => throw new FormatException($"Неизвестный тип эффекта '{typeStr}'")
             };
 
             string val = token.Substring(colon + 1).Trim();
             if (!val.EndsWith("%"))
-                throw new FormatException($"Effect value must end with %: '{val}'");
-            val = val.Substring(0, val.Length - 1);
-            if (!val.StartsWith("+") && !val.StartsWith("-"))
-                throw new FormatException($"Effect value must start with + or -: '{val}'");
+                throw new FormatException($"Значение эффекта должно оканчиваться на %: '{val}'");
+            val = val.Substring(0, val.Length - 1).Trim();
 
+            // NumberStyles.Float допускает ведущий знак, поэтому '+50', '-50' и '50' все валидны.
             if (!float.TryParse(val, System.Globalization.NumberStyles.Float,
                                 System.Globalization.CultureInfo.InvariantCulture, out float pct))
-                throw new FormatException($"Effect value not a number: '{val}'");
+                throw new FormatException($"Значение эффекта не число: '{val}'");
 
-            return new AdjacencyEffect { Type = type, Multiplier = pct / 100f };
+            return new AdjacencyEffect { Type = type, Multiplier = pct / 100f, Stackable = stackable };
         }
     }
 }
