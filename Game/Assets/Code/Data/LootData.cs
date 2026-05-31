@@ -12,8 +12,7 @@ namespace Mimic.Data
         public int AcidCost;
         public int HealOnDigest;
         public int CellsRestoredOnDigest;
-        public string AdjacencyTarget;            // empty = no property
-        public AdjacencyEffect[] AdjacencyEffects; // never null; empty if no property
+        public AdjacencyRule[] AdjacencyRules;    // never null; пустой = нет свойства
 
         // --- голубой луп ---
         public LootCategory Category = LootCategory.Normal;
