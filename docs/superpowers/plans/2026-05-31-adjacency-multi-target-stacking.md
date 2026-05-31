@@ -1,79 +1,64 @@
-# Adjacency мульти-таргет и стакающиеся эффекты — Implementation Plan
+# Adjacency блочный формат, мульти-таргет, вайлдкард, стак — Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Один предмет может иметь несколько пар «таргет → эффект» (через `|`), а каждый эффект может быть стакающимся (`*`); множители одного типа складываются аддитивно и применяются к базе один раз.
+**Goal:** Adjacency задаётся одним полем CSV с блочной грамматикой `targets|effects` (блоки через `;`, таргеты/эффекты через `,`, вайлдкард `*`, стак-суффикс `*`); множители одного типа складываются аддитивно и применяются к базе один раз.
 
-**Architecture:** Парсинг пар выносится в новый struct `AdjacencyRule.ParseRules(targetRaw, effectRaw)`, который zip-ует два столбца CSV по `|` и переиспользует `AdjacencyEffect.ParseList` (с поддержкой суффикса `*`). `LootData` хранит `AdjacencyRule[]`. `AdjacencyResolver` для каждого предмета суммирует вклады всех правил по типам (`gold`/`acid`), учитывая число прилегающих инстансов для стакающихся, и применяет сумму к базе единожды.
+**Architecture:** `AdjacencyEffect.Parse` парсит один эффект (знак опционален, `*` = стак). `AdjacencyRule.ParseRules` парсит всё поле: блоки по `;`, внутри `targets|effects`, таргеты/эффекты по `,`, `*`-таргет = вайлдкард. `LootData` хранит `AdjacencyRule[]`. `AdjacencyResolver` для каждого предмета считает прилегающие инстансы по каждому блоку (вайлдкард — по неназванным id), суммирует вклады по типам и применяет к базе единожды.
 
-**Tech Stack:** Unity 6000.3.16f1, C# (Assembly-CSharp, без asmdef). Автотестов нет (game jam, CI/asmdef запрещены) — верификация прогоняется через Unity MCP `execute_code` после компиляции.
+**Tech Stack:** Unity 6000.3.16f1, C# (Assembly-CSharp, без asmdef). Автотестов нет — верификация через Unity MCP `execute_code` после компиляции.
 
 ---
 
-## Замечание про порядок и компиляцию
+## Порядок и компиляция
 
-Изменения в `LootData` / `AdjacencyResolver` / `GameContext` / `TooltipController` взаимозависимы: проект не скомпилируется, пока все они не согласованы. Поэтому код пишется задачами 1–7 подряд (коммит на каждую), а единый верификационный прогон — задача 8 (после успешной компиляции). Это сознательная адаптация TDD под Unity без тестовой сборки: «тест» — это сниппет ассертов из задачи 8, он гоняется в конце.
+`LootData` / `LootCatalog` / `AdjacencyResolver` / `GameContext` / `TooltipController` взаимозависимы — проект не компилируется, пока все не согласованы. Код пишется задачами 1–8 подряд (коммит на каждую), единый верификационный прогон — задача 9.
 
-После каждой правки `.cs` исполнитель обновляет Unity и проверяет консоль:
-- Refresh: `mcp__unityMCP__refresh_unity`
-- Дождаться `editor_state.isCompiling == false`
-- `mcp__unityMCP__read_console` (filter Error) — ошибок быть не должно.
-
-Правки файлов делаются инструментом `Edit` по точным строкам ниже.
+После правок `.cs`: `mcp__unityMCP__refresh_unity` → дождаться `editor_state.isCompiling == false` → `mcp__unityMCP__read_console` (filter Error). Полную компиляцию проверяем после Task 8. Правки делаются инструментом `Edit`.
 
 ---
 
 ## File Structure
 
-- `Game/Assets/Code/Data/AdjacencyEffect.cs` — **modify**: поле `Stackable`, парсинг суффикса `*`.
-- `Game/Assets/Code/Data/AdjacencyRule.cs` — **create**: struct `AdjacencyRule` + `ParseRules`.
-- `Game/Assets/Code/Data/LootData.cs` — **modify**: замена двух полей на `AdjacencyRule[] AdjacencyRules`.
-- `Game/Assets/Code/Catalogs/LootCatalog.cs` — **modify**: вызов `AdjacencyRule.ParseRules`.
-- `Game/Assets/Code/Logic/AdjacencyResolver.cs` — **modify**: новая сигнатура + аддитивная логика.
+- `Game/Assets/Code/Data/AdjacencyEffect.cs` — **modify**: `Stackable`, публичный `Parse`, опциональный знак, удалить `ParseList`.
+- `Game/Assets/Code/Data/AdjacencyRule.cs` — **create**: struct + `ParseRules`.
+- `Game/Assets/Code/Data/LootData.cs` — **modify**: поле `AdjacencyRules`.
+- `Game/Assets/Code/Catalogs/LootCatalog.cs` — **modify**: `ParseRules(row[8])` + реиндексация 9–14.
+- `Game/Assets/Code/Logic/AdjacencyResolver.cs` — **modify**: вайлдкард + аддитив + стак.
 - `Game/Assets/Code/Game/GameContext.cs` — **modify**: передать `AdjacencyRules`.
-- `Game/Assets/Code/UI/TooltipController.cs` — **modify**: `DescribeAdjacency` по правилам.
+- `Game/Assets/Code/UI/TooltipController.cs` — **modify**: описание по блокам.
+- `Game/Assets/Resources/Configs/loot.csv.txt` — **modify**: удалить столбец `adjacencyTarget`, склеить поле.
 
 ---
 
-## Task 1: AdjacencyEffect — поле Stackable и парсинг `*`
+## Task 1: AdjacencyEffect — Parse, Stackable, опциональный знак
 
 **Files:**
-- Modify: `Game/Assets/Code/Data/AdjacencyEffect.cs`
+- Modify (rewrite целиком): `Game/Assets/Code/Data/AdjacencyEffect.cs`
 
-- [ ] **Step 1: Добавить поле `Stackable`**
+- [ ] **Step 1: Переписать файл целиком**
 
-Заменить (строки 10–11):
+Полное новое содержимое `Game/Assets/Code/Data/AdjacencyEffect.cs`:
 
 ```csharp
+using System;
+
+namespace Mimic.Data
+{
+    public enum EffectType { Gold, Acid }
+
+    public struct AdjacencyEffect
+    {
         public EffectType Type;
         public float Multiplier; // +0.5 = +50%, -0.3 = -30%
-```
+        public bool Stackable;   // '*' суффикс: применять за каждый прилегающий инстанс
 
-на:
-
-```csharp
-        public EffectType Type;
-        public float Multiplier; // +0.5 = +50%, -0.3 = -30%
-        public bool Stackable;   // '*' в конце строки эффекта: применять за каждый прилегающий инстанс
-```
-
-- [ ] **Step 2: Срезать `*` в начале `ParseOne` и проставить флаг**
-
-Заменить начало метода `ParseOne` (строки 27–31):
-
-```csharp
-        private static AdjacencyEffect ParseOne(string token)
+        // Парсит ОДИН эффект: '<type>:<sign?><n>%' с опциональным '*' в конце.
+        // Знак опционален: 'gold:5%' == 'gold:+5%'.
+        public static AdjacencyEffect Parse(string token)
         {
-            int colon = token.IndexOf(':');
-            if (colon <= 0 || colon == token.Length - 1)
-                throw new FormatException($"Effect must be '<type>:<sign><n>%': got '{token}'");
-```
+            token = token.Trim();
 
-на:
-
-```csharp
-        private static AdjacencyEffect ParseOne(string token)
-        {
             bool stackable = false;
             if (token.EndsWith("*"))
             {
@@ -83,38 +68,47 @@
 
             int colon = token.IndexOf(':');
             if (colon <= 0 || colon == token.Length - 1)
-                throw new FormatException($"Effect must be '<type>:<sign><n>%': got '{token}'");
-```
+                throw new FormatException($"Эффект должен быть '<type>:<sign><n>%': '{token}'");
 
-- [ ] **Step 3: Прокинуть флаг в результат**
+            string typeStr = token.Substring(0, colon).Trim().ToLowerInvariant();
+            EffectType type = typeStr switch
+            {
+                "gold" => EffectType.Gold,
+                "acid" => EffectType.Acid,
+                _ => throw new FormatException($"Неизвестный тип эффекта '{typeStr}'")
+            };
 
-Заменить последнюю строку метода `ParseOne` (строка 52):
+            string val = token.Substring(colon + 1).Trim();
+            if (!val.EndsWith("%"))
+                throw new FormatException($"Значение эффекта должно оканчиваться на %: '{val}'");
+            val = val.Substring(0, val.Length - 1).Trim();
 
-```csharp
-            return new AdjacencyEffect { Type = type, Multiplier = pct / 100f };
-```
+            // NumberStyles.Float допускает ведущий знак, поэтому '+50', '-50' и '50' все валидны.
+            if (!float.TryParse(val, System.Globalization.NumberStyles.Float,
+                                System.Globalization.CultureInfo.InvariantCulture, out float pct))
+                throw new FormatException($"Значение эффекта не число: '{val}'");
 
-на:
-
-```csharp
             return new AdjacencyEffect { Type = type, Multiplier = pct / 100f, Stackable = stackable };
+        }
+    }
+}
 ```
 
-- [ ] **Step 4: Refresh Unity и проверить компиляцию**
+- [ ] **Step 2: Refresh Unity и проверить компиляцию**
 
-Run: `mcp__unityMCP__refresh_unity`, дождаться `isCompiling == false`, затем `mcp__unityMCP__read_console` (filter Error).
-Expected: 0 ошибок (этот файл самодостаточен).
+Run: `mcp__unityMCP__refresh_unity`, дождаться `isCompiling == false`, `mcp__unityMCP__read_console` (filter Error).
+Expected: появится ошибка в `LootCatalog.cs` (`AdjacencyEffect.ParseList` больше нет) — это ожидаемо, чинится в Task 4. Других ошибок в этом файле быть не должно.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
 git add Game/Assets/Code/Data/AdjacencyEffect.cs
-git commit -m "feat(adjacency): поддержка стакающегося эффекта '*' в AdjacencyEffect"
+git commit -m "feat(adjacency): AdjacencyEffect.Parse — стак '*' и опциональный знак"
 ```
 
 ---
 
-## Task 2: AdjacencyRule — новый struct и ParseRules
+## Task 2: AdjacencyRule — блочный парсер
 
 **Files:**
 - Create: `Game/Assets/Code/Data/AdjacencyRule.cs`
@@ -129,39 +123,66 @@ using System.Collections.Generic;
 
 namespace Mimic.Data
 {
-    // Одна пара «таргет → эффекты». Несколько пар на предмете задаются в конфиге через '|'.
+    // Один блок «таргеты | эффекты». Несколько блоков на предмете разделяются ';'.
     public struct AdjacencyRule
     {
-        public string Target;             // id соседа-триггера
-        public AdjacencyEffect[] Effects; // эффекты этой пары (never null/empty в валидном правиле)
+        public string[] Targets;          // id соседей; пусто при Wildcard
+        public bool Wildcard;             // таргет '*' — все НЕназванные соседи
+        public AdjacencyEffect[] Effects; // эффекты блока (never null/empty в валидном правиле)
 
-        // targetRaw/effectRaw — столбцы CSV. '|' разбивает на пары по индексу,
-        // ';' внутри сегмента эффекта — несколько эффектов на один таргет.
-        public static AdjacencyRule[] ParseRules(string targetRaw, string effectRaw)
+        // Грамматика поля:
+        //   <block>(';'<block>)*, block := <targets>'|'<effects>
+        //   targets через ',', effects через ',', '*' слева — вайлдкард, '*' в конце эффекта — стак.
+        public static AdjacencyRule[] ParseRules(string raw)
         {
-            bool noTarget = string.IsNullOrWhiteSpace(targetRaw);
-            bool noEffect = string.IsNullOrWhiteSpace(effectRaw);
-            if (noTarget && noEffect) return Array.Empty<AdjacencyRule>();
-            if (noTarget || noEffect)
-                throw new FormatException(
-                    $"Adjacency: target и effect должны быть оба заданы или оба пусты (target='{targetRaw}', effect='{effectRaw}')");
+            if (string.IsNullOrWhiteSpace(raw)) return Array.Empty<AdjacencyRule>();
 
-            var targets = targetRaw.Split('|');
-            var effects = effectRaw.Split('|');
-            if (targets.Length != effects.Length)
-                throw new FormatException(
-                    $"Adjacency: число таргетов ({targets.Length}) != числу эффектов ({effects.Length}) ('{targetRaw}' | '{effectRaw}')");
-
-            var rules = new List<AdjacencyRule>(targets.Length);
-            for (int i = 0; i < targets.Length; i++)
+            var blocks = raw.Split(';');
+            var rules = new List<AdjacencyRule>();
+            foreach (var blockRaw in blocks)
             {
-                var t = targets[i].Trim();
-                if (t.Length == 0)
-                    throw new FormatException($"Adjacency: пустой таргет #{i} в '{targetRaw}'");
-                var fx = AdjacencyEffect.ParseList(effects[i]);
-                if (fx.Length == 0)
-                    throw new FormatException($"Adjacency: пустой эффект #{i} в '{effectRaw}'");
-                rules.Add(new AdjacencyRule { Target = t, Effects = fx });
+                var block = blockRaw.Trim();
+                if (block.Length == 0) continue; // допускаем хвостовой ';'
+
+                int bar = block.IndexOf('|');
+                if (bar <= 0 || bar == block.Length - 1)
+                    throw new FormatException($"Блок adjacency должен быть '<targets>|<effects>': '{block}'");
+
+                string targetsPart = block.Substring(0, bar);
+                string effectsPart = block.Substring(bar + 1);
+
+                // --- таргеты ---
+                var targets = new List<string>();
+                bool wildcard = false;
+                foreach (var tt in targetsPart.Split(','))
+                {
+                    var t = tt.Trim();
+                    if (t.Length == 0) continue;
+                    if (t == "*") wildcard = true;
+                    else targets.Add(t);
+                }
+                if (wildcard && targets.Count > 0)
+                    throw new FormatException($"Вайлдкард '*' нельзя смешивать с id: '{targetsPart}'");
+                if (!wildcard && targets.Count == 0)
+                    throw new FormatException($"Пустой список таргетов в блоке: '{block}'");
+
+                // --- эффекты ---
+                var effects = new List<AdjacencyEffect>();
+                foreach (var et in effectsPart.Split(','))
+                {
+                    var e = et.Trim();
+                    if (e.Length == 0) continue;
+                    effects.Add(AdjacencyEffect.Parse(e));
+                }
+                if (effects.Count == 0)
+                    throw new FormatException($"Пустой список эффектов в блоке: '{block}'");
+
+                rules.Add(new AdjacencyRule
+                {
+                    Targets = targets.ToArray(),
+                    Wildcard = wildcard,
+                    Effects = effects.ToArray()
+                });
             }
             return rules.ToArray();
         }
@@ -169,21 +190,16 @@ namespace Mimic.Data
 }
 ```
 
-- [ ] **Step 2: Refresh Unity и проверить компиляцию**
-
-Run: `mcp__unityMCP__refresh_unity`, дождаться `isCompiling == false`, `mcp__unityMCP__read_console` (filter Error).
-Expected: 0 ошибок.
-
-- [ ] **Step 3: Commit**
+- [ ] **Step 2: Commit**
 
 ```bash
 git add Game/Assets/Code/Data/AdjacencyRule.cs Game/Assets/Code/Data/AdjacencyRule.cs.meta
-git commit -m "feat(adjacency): AdjacencyRule.ParseRules — пары таргет/эффект через '|'"
+git commit -m "feat(adjacency): AdjacencyRule.ParseRules — блочный формат с вайлдкардом"
 ```
 
 ---
 
-## Task 3: LootData — заменить поля на AdjacencyRules
+## Task 3: LootData — поле AdjacencyRules
 
 **Files:**
 - Modify: `Game/Assets/Code/Data/LootData.cs:15-16`
@@ -203,56 +219,66 @@ git commit -m "feat(adjacency): AdjacencyRule.ParseRules — пары тарге
         public AdjacencyRule[] AdjacencyRules;    // never null; пустой = нет свойства
 ```
 
-- [ ] **Step 2: НЕ рефрешить отдельно**
-
-Этот файл ломает компиляцию `LootCatalog`/`GameContext`/`TooltipController` до их обновления — это ожидаемо. Компиляцию проверяем после Task 7. Сразу переходим к коммиту (код самосогласован внутри файла).
-
-- [ ] **Step 3: Commit**
+- [ ] **Step 2: Commit**
 
 ```bash
 git add Game/Assets/Code/Data/LootData.cs
-git commit -m "refactor(adjacency): LootData хранит AdjacencyRule[] вместо target+effects"
+git commit -m "refactor(adjacency): LootData хранит AdjacencyRule[]"
 ```
 
 ---
 
-## Task 4: LootCatalog — вызвать ParseRules
+## Task 4: LootCatalog — ParseRules и реиндексация столбцов
 
 **Files:**
-- Modify: `Game/Assets/Code/Catalogs/LootCatalog.cs:30-31`
+- Modify: `Game/Assets/Code/Catalogs/LootCatalog.cs:30-37`
 
-- [ ] **Step 1: Заменить заполнение полей**
+После удаления столбца `adjacencyTarget` индексы столбцов 9–15 сдвигаются на −1.
 
-Заменить (строки 30–31):
+- [ ] **Step 1: Заменить блок присваиваний**
+
+Заменить (строки 30–37):
 
 ```csharp
                     AdjacencyTarget = row[8],
                     AdjacencyEffects = AdjacencyEffect.ParseList(row[9]),
+                    Category = ParseCategory(Col(row, 10, "normal")),
+                    AcidRestoreOnDigest = int.Parse(Col(row, 11, "0")),
+                    DamageOnDigest = int.Parse(Col(row, 12, "0")),
+                    CanReturnToBasket = Col(row, 13, "1") != "0",
+                    IsGlue = Col(row, 14, "0") == "1",
+                    NeighborGoldPct = int.Parse(Col(row, 15, "0")),
 ```
 
 на:
 
 ```csharp
-                    AdjacencyRules = AdjacencyRule.ParseRules(row[8], row[9]),
+                    AdjacencyRules = AdjacencyRule.ParseRules(row[8]),
+                    Category = ParseCategory(Col(row, 9, "normal")),
+                    AcidRestoreOnDigest = int.Parse(Col(row, 10, "0")),
+                    DamageOnDigest = int.Parse(Col(row, 11, "0")),
+                    CanReturnToBasket = Col(row, 12, "1") != "0",
+                    IsGlue = Col(row, 13, "0") == "1",
+                    NeighborGoldPct = int.Parse(Col(row, 14, "0")),
 ```
 
 - [ ] **Step 2: Commit**
 
 ```bash
 git add Game/Assets/Code/Catalogs/LootCatalog.cs
-git commit -m "refactor(adjacency): LootCatalog грузит AdjacencyRules через ParseRules"
+git commit -m "refactor(adjacency): LootCatalog грузит AdjacencyRules, реиндексация столбцов"
 ```
 
 ---
 
-## Task 5: AdjacencyResolver — новая сигнатура и аддитивная логика
+## Task 5: AdjacencyResolver — вайлдкард, аддитив, стак
 
 **Files:**
 - Modify: `Game/Assets/Code/Logic/AdjacencyResolver.cs`
 
 - [ ] **Step 1: Заменить обе перегрузки `Resolve` (строки 18–96)**
 
-Заменить блок от `public static AdjacencyResult<T> Resolve<T>(` (первая перегрузка, строка 18) до закрывающей `return result; }` второй перегрузки (строка 96) на:
+Заменить блок от первой `public static AdjacencyResult<T> Resolve<T>(` (строка 18) до закрывающей `return result; }` второй перегрузки (строка 96) на:
 
 ```csharp
         public static AdjacencyResult<T> Resolve<T>(
@@ -290,19 +316,25 @@ git commit -m "refactor(adjacency): LootCatalog грузит AdjacencyRules че
 
                 var neighbors = GetEdgeNeighbors(grid, item);
 
+                // множество явно названных таргетов предмета (для вайлдкарда)
+                var named = new HashSet<string>();
+                foreach (var rule in rules)
+                    if (!rule.Wildcard && rule.Targets != null)
+                        foreach (var t in rule.Targets) named.Add(t);
+
                 float sumGold = 0f;
                 float sumAcid = 0f;
                 foreach (var rule in rules)
                 {
-                    if (string.IsNullOrEmpty(rule.Target) || rule.Effects == null || rule.Effects.Length == 0)
-                        continue;
+                    if (rule.Effects == null || rule.Effects.Length == 0) continue;
 
-                    // число различных прилегающих инстансов с нужным id
                     int count = 0;
                     foreach (var n in neighbors)
                     {
                         if (ReferenceEquals(n, item)) continue;
-                        if (idOf(n) == rule.Target) count++;
+                        string nid = idOf(n);
+                        bool match = rule.Wildcard ? !named.Contains(nid) : ContainsId(rule.Targets, nid);
+                        if (match) count++;
                     }
                     if (count == 0) continue;
 
@@ -344,6 +376,13 @@ git commit -m "refactor(adjacency): LootCatalog грузит AdjacencyRules че
             foreach (var v in result.EffectiveGold.Values) result.TotalGold += v;
             return result;
         }
+
+        private static bool ContainsId(string[] ids, string id)
+        {
+            if (ids == null) return false;
+            for (int i = 0; i < ids.Length; i++) if (ids[i] == id) return true;
+            return false;
+        }
 ```
 
 (Методы `GetEdgeNeighbors` и `TryAddNeighbor` ниже — без изменений.)
@@ -352,7 +391,7 @@ git commit -m "refactor(adjacency): LootCatalog грузит AdjacencyRules че
 
 ```bash
 git add Game/Assets/Code/Logic/AdjacencyResolver.cs
-git commit -m "feat(adjacency): аддитивное суммирование правил + стак по числу инстансов"
+git commit -m "feat(adjacency): вайлдкард, аддитивная сумма блоков, стак по инстансам"
 ```
 
 ---
@@ -381,12 +420,12 @@ git commit -m "feat(adjacency): аддитивное суммирование п
 
 ```bash
 git add Game/Assets/Code/Game/GameContext.cs
-git commit -m "refactor(adjacency): GameContext передаёт AdjacencyRules в resolver"
+git commit -m "refactor(adjacency): GameContext передаёт AdjacencyRules"
 ```
 
 ---
 
-## Task 7: TooltipController — описание по правилам
+## Task 7: TooltipController — описание по блокам
 
 **Files:**
 - Modify: `Game/Assets/Code/UI/TooltipController.cs:238-254`
@@ -427,8 +466,20 @@ git commit -m "refactor(adjacency): GameContext передаёт AdjacencyRules 
             {
                 if (rule.Effects == null || rule.Effects.Length == 0) continue;
                 if (sb.Length > 0) sb.Append('\n');
-                string targetName = LookupName(rule.Target);
-                sb.Append($"Рядом с «{targetName}»:");
+
+                string who;
+                if (rule.Wildcard)
+                {
+                    who = "прочими предметами";
+                }
+                else
+                {
+                    var names = new string[rule.Targets.Length];
+                    for (int i = 0; i < rule.Targets.Length; i++) names[i] = LookupName(rule.Targets[i]);
+                    who = "«" + string.Join("» или «", names) + "»";
+                }
+                sb.Append($"Рядом с {who}:");
+
                 foreach (var fx in rule.Effects)
                 {
                     string kind = fx.Type == EffectType.Gold ? "цена" : "стоимость переваривания";
@@ -442,29 +493,67 @@ git commit -m "refactor(adjacency): GameContext передаёт AdjacencyRules 
         }
 ```
 
-- [ ] **Step 2: Refresh Unity и проверить компиляцию всего проекта**
-
-Run: `mcp__unityMCP__refresh_unity`, дождаться `isCompiling == false`, `mcp__unityMCP__read_console` (filter Error).
-Expected: 0 ошибок. Теперь все зависимые файлы (Tasks 3–7) согласованы и проект компилируется.
-
-- [ ] **Step 3: Commit**
+- [ ] **Step 2: Commit**
 
 ```bash
 git add Game/Assets/Code/UI/TooltipController.cs
-git commit -m "feat(adjacency): тултип показывает несколько правил и пометку 'за каждый'"
+git commit -m "feat(adjacency): тултип описывает блоки (мульти-таргет, вайлдкард, 'за каждый')"
 ```
 
 ---
 
-## Task 8: Верификация логики через Unity MCP
+## Task 8: loot.csv — удалить столбец adjacencyTarget, склеить поле
 
-**Files:** нет (прогон в редакторе).
+**Files:**
+- Modify (rewrite): `Game/Assets/Resources/Configs/loot.csv.txt`
 
-Цель — автоматически проверить парсинг и resolver на контрольных кейсах из спеки. Прогоняется после успешной компиляции (Task 7).
+Старые `adjacencyTarget` + `adjacencyEffect` склеиваются в одно поле
+`target|effect`. Пустые → пусто. Ни одна существующая строка не содержит запятых
+в adjacency-поле, поэтому кавычки не нужны (поле `description` остаётся как было).
+
+- [ ] **Step 1: Записать новое содержимое файла**
+
+Полное новое содержимое `Game/Assets/Resources/Configs/loot.csv.txt`:
+
+```
+id,name,description,shape,gold,acidCost,healOnDigest,cellsRestoredOnDigest,adjacencyEffect,category,acidRestoreOnDigest,damageOnDigest,canReturnToBasket,glue,neighborGoldPct
+sword,Меч,"Острый, но тупой",X|X|X|X,10,3,0,0,,normal,0,0,1,0,0
+shield,Щит,Защита от себя,XX|XX,8,4,5,0,sword|gold:+50%,normal,0,0,1,0,0
+barracuda,Барракуда,Ещё трепыхается,X.|XX|X.|X.,15,5,0,2,bread|acid:-30%,normal,0,0,1,0,0
+bread,Хлеб,Несвежий,XX,3,1,2,0,,normal,0,0,1,0,0
+gem,Самоцвет,Дешёвый блеск,X,20,2,0,0,gem|gold:+25%,normal,0,0,1,0,0
+heart,Сердце,Бьётся,X,0,99,0,0,,fixture,0,0,0,0,0
+stomach,Желудок,Урчит,XX|XX,0,99,0,0,,fixture,0,0,0,0,0
+mimicburger,Мимик-бургер,Зубастый!,XX,0,3,8,0,,reward,0,0,1,0,0
+acidbottle,Бутылка кислоты,Шипит,X|X,0,2,0,0,,reward,6,0,1,0,0
+firecola,Огне-кола,Отрыжка пламенем,X,0,2,0,0,,reward,0,0,1,0,0
+weight,Гиря 60кг,Тяжёлая,XX|XX|XX,0,5,0,0,,punish,0,30,0,0,0
+poop,Какашка,Портит всё!,X,0,4,0,0,stomach|acid:+50%,punish,0,8,0,0,-50
+glue,Масса клея,Липкая,XX,0,3,0,0,,punish,0,4,0,1,0
+tooth,Зуб с кариесом,Болит,X,0,9,0,0,,punish,0,0,0,0,0
+```
+
+- [ ] **Step 2: Refresh Unity и проверить компиляцию всего проекта**
+
+Run: `mcp__unityMCP__refresh_unity`, дождаться `isCompiling == false`, `mcp__unityMCP__read_console` (filter Error).
+Expected: 0 ошибок — все зависимые файлы согласованы, проект компилируется.
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add Game/Assets/Resources/Configs/loot.csv.txt
+git commit -m "config(adjacency): удалить столбец adjacencyTarget, склеить в adjacencyEffect"
+```
+
+---
+
+## Task 9: Верификация логики через Unity MCP
+
+**Files:** нет (прогон в редакторе после компиляции).
 
 - [ ] **Step 1: Прогнать верификационный сниппет**
 
-Через `mcp__unityMCP__execute_code` выполнить C#:
+Через `mcp__unityMCP__execute_code` выполнить:
 
 ```csharp
 using System;
@@ -474,23 +563,23 @@ using UnityEngine;
 
 string Fail(string m) { Debug.LogError("VERIFY FAIL: " + m); return "FAIL: " + m; }
 
-// --- Парсинг ---
-var rules = AdjacencyRule.ParseRules("hat|sheath|frog", "gold:+50%|gold:+50%|gold:-50%");
-if (rules.Length != 3) return Fail($"ожидал 3 правила, получил {rules.Length}");
-if (rules[2].Target != "frog") return Fail("3-й таргет не frog");
-if (Mathf.Abs(rules[0].Effects[0].Multiplier - 0.5f) > 1e-4f) return Fail("hat множитель != 0.5");
+// --- Парсинг блочной строки ---
+var rules = AdjacencyRule.ParseRules("hat | gold:+50% , acid:+50% ; sheath , frog | gold:-50% ; *|gold:5%");
+if (rules.Length != 3) return Fail($"ожидал 3 блока, получил {rules.Length}");
+if (rules[0].Wildcard || rules[0].Targets.Length != 1 || rules[0].Targets[0] != "hat") return Fail("блок 0 != hat");
+if (rules[0].Effects.Length != 2) return Fail("блок 0: ожидал 2 эффекта");
+if (rules[1].Targets.Length != 2 || rules[1].Targets[1] != "frog") return Fail("блок 1 != sheath,frog");
+if (!rules[2].Wildcard) return Fail("блок 2 не вайлдкард");
+if (Mathf.Abs(rules[2].Effects[0].Multiplier - 0.05f) > 1e-4f) return Fail("вайлдкард gold:5% != 0.05");
 
-var stackFx = AdjacencyEffect.ParseList("gold:+50%*");
-if (!stackFx[0].Stackable) return Fail("'*' не распознан как Stackable");
-var plainFx = AdjacencyEffect.ParseList("gold:+50%");
-if (plainFx[0].Stackable) return Fail("без '*' Stackable должен быть false");
+if (!AdjacencyEffect.Parse("gold:+50%*").Stackable) return Fail("'*' не распознан как Stackable");
+if (AdjacencyEffect.Parse("gold:5%").Stackable) return Fail("без '*' Stackable должен быть false");
 
-bool mismatchThrew = false;
-try { AdjacencyRule.ParseRules("hat|sheath", "gold:+50%"); }
-catch (FormatException) { mismatchThrew = true; }
-if (!mismatchThrew) return Fail("несовпадение длин не кинуло FormatException");
+bool threw = false;
+try { AdjacencyRule.ParseRules("hat"); } catch (FormatException) { threw = true; }
+if (!threw) return Fail("блок без '|' не кинул FormatException");
 
-// --- Resolver: хелпер для одноклеточных предметов ---
+// --- Resolver ---
 LootData Mk(string id, int gold, int acid, AdjacencyRule[] rs) => new LootData {
     Id = id, Gold = gold, AcidCost = acid, Shape = Shape.Parse("X"),
     AdjacencyRules = rs ?? Array.Empty<AdjacencyRule>()
@@ -498,49 +587,61 @@ LootData Mk(string id, int gold, int acid, AdjacencyRule[] rs) => new LootData {
 AdjacencyResult<LootData> Run(GridModel<LootData> g) => AdjacencyResolver.Resolve(
     g, v => v.Id, v => v.Gold, v => v.AcidCost, v => v.AdjacencyRules, v => v.NeighborGoldPct);
 
-// Кейс A: стак +50%* с двумя hat => +100% => 200
+// A: стак +50%* с двумя hat => +100% => 200
 {
     var g = new GridModel<LootData>(3, 3);
-    var diamond = Mk("diamond", 100, 1, AdjacencyRule.ParseRules("hat", "gold:+50%*"));
-    g.TryPlace(diamond, 1, 1, Rotation.Deg0);
+    var d = Mk("diamond", 100, 1, AdjacencyRule.ParseRules("hat|gold:+50%*"));
+    g.TryPlace(d, 1, 1, Rotation.Deg0);
     g.TryPlace(Mk("hat", 0, 1, null), 0, 1, Rotation.Deg0);
     g.TryPlace(Mk("hat", 0, 1, null), 2, 1, Rotation.Deg0);
-    int got = Run(g).GetGold(diamond);
-    if (got != 200) return Fail($"стак: ожидал 200, получил {got}");
+    int got = Run(g).GetGold(d); if (got != 200) return Fail($"A стак: ожидал 200, получил {got}");
 }
-
-// Кейс B: нестак +50% с двумя hat => +50% => 150
+// B: нестак +50% с двумя hat => +50% => 150
 {
     var g = new GridModel<LootData>(3, 3);
-    var diamond = Mk("diamond", 100, 1, AdjacencyRule.ParseRules("hat", "gold:+50%"));
-    g.TryPlace(diamond, 1, 1, Rotation.Deg0);
+    var d = Mk("diamond", 100, 1, AdjacencyRule.ParseRules("hat|gold:+50%"));
+    g.TryPlace(d, 1, 1, Rotation.Deg0);
     g.TryPlace(Mk("hat", 0, 1, null), 0, 1, Rotation.Deg0);
     g.TryPlace(Mk("hat", 0, 1, null), 2, 1, Rotation.Deg0);
-    int got = Run(g).GetGold(diamond);
-    if (got != 150) return Fail($"нестак: ожидал 150, получил {got}");
+    int got = Run(g).GetGold(d); if (got != 150) return Fail($"B нестак: ожидал 150, получил {got}");
 }
-
-// Кейс C: две пары, оба соседа => +50% + +50% = +100% => 20
+// C: мульти-таргет в одном блоке (нестак), hat+sheath => один раз +50% => 15
 {
     var g = new GridModel<LootData>(3, 3);
-    var sword = Mk("sword", 10, 1, AdjacencyRule.ParseRules("hat|sheath", "gold:+50%|gold:+50%"));
-    g.TryPlace(sword, 1, 1, Rotation.Deg0);
+    var s = Mk("sword", 10, 1, AdjacencyRule.ParseRules("hat,sheath|gold:+50%"));
+    g.TryPlace(s, 1, 1, Rotation.Deg0);
     g.TryPlace(Mk("hat", 0, 1, null), 0, 1, Rotation.Deg0);
     g.TryPlace(Mk("sheath", 0, 1, null), 2, 1, Rotation.Deg0);
-    int got = Run(g).GetGold(sword);
-    if (got != 20) return Fail($"две пары: ожидал 20, получил {got}");
+    int got = Run(g).GetGold(s); if (got != 15) return Fail($"C мульти-таргет: ожидал 15, получил {got}");
 }
-
-// Кейс D: отрицательный стак -50%* с тремя frog => -150% => пол 0
+// D: два блока, hat(+50%) + sheath(+50%) => +100% => 20
 {
     var g = new GridModel<LootData>(3, 3);
-    var coin = Mk("coin", 100, 1, AdjacencyRule.ParseRules("frog", "gold:-50%*"));
-    g.TryPlace(coin, 1, 1, Rotation.Deg0);
+    var s = Mk("sword", 10, 1, AdjacencyRule.ParseRules("hat|gold:+50%;sheath|gold:+50%"));
+    g.TryPlace(s, 1, 1, Rotation.Deg0);
+    g.TryPlace(Mk("hat", 0, 1, null), 0, 1, Rotation.Deg0);
+    g.TryPlace(Mk("sheath", 0, 1, null), 2, 1, Rotation.Deg0);
+    int got = Run(g).GetGold(s); if (got != 20) return Fail($"D два блока: ожидал 20, получил {got}");
+}
+// E: вайлдкард — frog(-50%) + двое прочих(+10% нестак) => -40% => 60
+{
+    var g = new GridModel<LootData>(3, 3);
+    var c = Mk("coin", 100, 1, AdjacencyRule.ParseRules("frog|gold:-50%;*|gold:+10%"));
+    g.TryPlace(c, 1, 1, Rotation.Deg0);
+    g.TryPlace(Mk("frog", 0, 1, null), 0, 1, Rotation.Deg0);
+    g.TryPlace(Mk("bread", 0, 1, null), 2, 1, Rotation.Deg0);
+    g.TryPlace(Mk("gem", 0, 1, null), 1, 0, Rotation.Deg0);
+    int got = Run(g).GetGold(c); if (got != 60) return Fail($"E вайлдкард: ожидал 60, получил {got}");
+}
+// F: отрицательный стак -50%* с тремя frog => -150% => пол 0
+{
+    var g = new GridModel<LootData>(3, 3);
+    var c = Mk("coin", 100, 1, AdjacencyRule.ParseRules("frog|gold:-50%*"));
+    g.TryPlace(c, 1, 1, Rotation.Deg0);
     g.TryPlace(Mk("frog", 0, 1, null), 0, 1, Rotation.Deg0);
     g.TryPlace(Mk("frog", 0, 1, null), 2, 1, Rotation.Deg0);
     g.TryPlace(Mk("frog", 0, 1, null), 1, 0, Rotation.Deg0);
-    int got = Run(g).GetGold(coin);
-    if (got != 0) return Fail($"минус-стак: ожидал 0, получил {got}");
+    int got = Run(g).GetGold(c); if (got != 0) return Fail($"F минус-стак: ожидал 0, получил {got}");
 }
 
 return "ALL ADJACENCY CHECKS PASSED";
@@ -548,30 +649,33 @@ return "ALL ADJACENCY CHECKS PASSED";
 
 Expected: возвращает `"ALL ADJACENCY CHECKS PASSED"`, в консоли нет `VERIFY FAIL`.
 
-- [ ] **Step 2: Проверить, что текущий конфиг грузится**
+- [ ] **Step 2: Проверить загрузку обновлённого конфига**
 
 Через `mcp__unityMCP__execute_code`:
 
 ```csharp
 Mimic.Catalogs.LootCatalog.Load();
-return "loot.csv OK, items=" + Mimic.Catalogs.LootCatalog.ById.Count;
+var shield = Mimic.Catalogs.LootCatalog.Get("shield");
+return $"loot.csv OK, items={Mimic.Catalogs.LootCatalog.ById.Count}, shield.rules={shield.AdjacencyRules.Length}, shield.target={(shield.AdjacencyRules.Length>0 ? shield.AdjacencyRules[0].Targets[0] : \"-\")}";
 ```
 
-Expected: без исключений, `items=14` (число строк лута в `loot.csv.txt`). Существующие одиночные пары (`shield`, `gem`, `barracuda`, `poop`) валидны как одно правило.
-
-- [ ] **Step 3: Финальный коммит-маркер (если были правки конфига/прочее)**
-
-Если на этом шаге ничего не менялось в файлах — пропустить. Иначе:
-
-```bash
-git add -A
-git commit -m "test(adjacency): верификация мульти-таргет и стака пройдена"
-```
+Expected: без исключений, `items=14`, `shield.rules=1`, `shield.target=sword`.
 
 ---
 
 ## Self-Review (выполнено автором плана)
 
-- **Покрытие спеки:** формат `|`/`;`/`*` → Task 1+2; модель `AdjacencyRule`/`Stackable` → Task 1+2+3; аддитивная логика + стак по инстансам → Task 5; ошибка при несовпадении длин → Task 2 (+ проверка в Task 8); тултип → Task 7; `NeighborGoldPct` не тронут → сохранён в Task 5; контрольные кейсы спеки → Task 8. Пробелов нет.
+- **Покрытие спеки:** грамматика блоков/`,`/`*`/вайлдкард → Task 1+2; опциональный
+  знак → Task 1; модель `AdjacencyRule`/`AdjacencyRules` → Task 2+3; реиндексация
+  CSV → Task 4+8; вайлдкард + аддитив + стак по инстансам → Task 5; `NeighborGoldPct`
+  сохранён → Task 5; тултип (мульти-таргет/вайлдкард/«за каждый») → Task 7;
+  миграция конфига → Task 8; контрольные кейсы → Task 9. Пробелов нет.
 - **Плейсхолдеры:** нет TBD/TODO; весь код приведён целиком.
-- **Согласованность типов:** `AdjacencyRule{ Target, Effects }`, `AdjacencyEffect{ Type, Multiplier, Stackable }`, `LootData.AdjacencyRules`, `AdjacencyRule.ParseRules(targetRaw, effectRaw)`, resolver-делегат `Func<T, AdjacencyRule[]>` — имена совпадают во всех задачах и в верификации.
+- **Согласованность типов:** `AdjacencyEffect.Parse(token)`, поля `{Type, Multiplier,
+  Stackable}`; `AdjacencyRule{ Targets[], Wildcard, Effects[] }` + `ParseRules(raw)`;
+  `LootData.AdjacencyRules`; resolver-делегат `Func<T, AdjacencyRule[]>`; helper
+  `ContainsId(string[], string)`. Имена согласованы во всех задачах и верификации.
+- **Реиндексация:** удаление столбца 8 сдвигает 9→8…15→14; LootCatalog (Task 4) и
+  CSV (Task 8) согласованы по новым индексам.
+```
+
