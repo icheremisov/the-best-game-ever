@@ -50,6 +50,11 @@ namespace Mimic.Game
                 gameObject.AddComponent<ContextMenuController>();
                 Debug.Log("[GameContext] Auto-added ContextMenuController");
             }
+            if (CombatController.Instance == null)
+            {
+                gameObject.AddComponent<CombatController>();
+                Debug.Log("[GameContext] Auto-added CombatController");
+            }
         }
 
         // Ensures a Camera exists in the scene so Unity doesn't complain
