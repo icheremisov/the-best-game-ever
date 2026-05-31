@@ -13,21 +13,20 @@ namespace Mimic.Tests
             public Shape Shape;
             public int Gold;
             public int AcidCost;
-            public string AdjacencyTarget;
-            public AdjacencyEffect[] AdjacencyEffects;
+            public AdjacencyRule[] AdjacencyRules;
         }
 
         private static Item Mk(string id, string shape, int gold, int acid,
                                string adjTarget = null, string adjEffect = null)
         {
+            string raw = (adjTarget != null && adjEffect != null) ? $"{adjTarget}|{adjEffect}" : null;
             return new Item
             {
                 Id = id,
                 Shape = Shape.Parse(shape),
                 Gold = gold,
                 AcidCost = acid,
-                AdjacencyTarget = adjTarget,
-                AdjacencyEffects = AdjacencyEffect.ParseList(adjEffect)
+                AdjacencyRules = AdjacencyRule.ParseRules(raw)
             };
         }
 
@@ -38,7 +37,7 @@ namespace Mimic.Tests
             var sword = Mk("sword", "X", 10, 3);
             grid.TryPlace(sword, 0, 0, Rotation.Deg0);
             var result = AdjacencyResolver.Resolve(grid, i => i.Id, i => i.Gold, i => i.AcidCost,
-                                                   i => i.AdjacencyTarget, i => i.AdjacencyEffects);
+                                                   i => i.AdjacencyRules);
             Assert.AreEqual(10, result.GetGold(sword));
             Assert.AreEqual(3, result.GetAcid(sword));
         }
@@ -52,7 +51,7 @@ namespace Mimic.Tests
             grid.TryPlace(sword, 0, 0, Rotation.Deg0);
             grid.TryPlace(shield, 1, 0, Rotation.Deg0); // adjacent on x-axis
             var result = AdjacencyResolver.Resolve(grid, i => i.Id, i => i.Gold, i => i.AcidCost,
-                                                   i => i.AdjacencyTarget, i => i.AdjacencyEffects);
+                                                   i => i.AdjacencyRules);
             Assert.AreEqual(8 + 4, result.GetGold(shield)); // 8 * 1.5 = 12
             Assert.AreEqual(10, result.GetGold(sword));     // sword has no effect
         }
@@ -66,7 +65,7 @@ namespace Mimic.Tests
             grid.TryPlace(bread, 0, 0, Rotation.Deg0);
             grid.TryPlace(fish, 0, 1, Rotation.Deg0);
             var result = AdjacencyResolver.Resolve(grid, i => i.Id, i => i.Gold, i => i.AcidCost,
-                                                   i => i.AdjacencyTarget, i => i.AdjacencyEffects);
+                                                   i => i.AdjacencyRules);
             // 5 * 0.4 = 2; clamp to >= 1
             Assert.AreEqual(2, result.GetAcid(fish));
         }
@@ -80,7 +79,7 @@ namespace Mimic.Tests
             grid.TryPlace(bread, 0, 0, Rotation.Deg0);
             grid.TryPlace(fish, 0, 1, Rotation.Deg0);
             var result = AdjacencyResolver.Resolve(grid, i => i.Id, i => i.Gold, i => i.AcidCost,
-                                                   i => i.AdjacencyTarget, i => i.AdjacencyEffects);
+                                                   i => i.AdjacencyRules);
             Assert.AreEqual(1, result.GetAcid(fish));
         }
 
@@ -91,14 +90,14 @@ namespace Mimic.Tests
             var a = Mk("gem", "X", 20, 2, adjTarget: "gem", adjEffect: "gold:+25%");
             grid.TryPlace(a, 0, 0, Rotation.Deg0);
             var result = AdjacencyResolver.Resolve(grid, i => i.Id, i => i.Gold, i => i.AcidCost,
-                                                   i => i.AdjacencyTarget, i => i.AdjacencyEffects);
+                                                   i => i.AdjacencyRules);
             // Alone — no boost
             Assert.AreEqual(20, result.GetGold(a));
 
             var b = Mk("gem", "X", 20, 2, adjTarget: "gem", adjEffect: "gold:+25%");
             grid.TryPlace(b, 1, 0, Rotation.Deg0);
             var result2 = AdjacencyResolver.Resolve(grid, i => i.Id, i => i.Gold, i => i.AcidCost,
-                                                    i => i.AdjacencyTarget, i => i.AdjacencyEffects);
+                                                    i => i.AdjacencyRules);
             Assert.AreEqual(25, result2.GetGold(a)); // 20 * 1.25
             Assert.AreEqual(25, result2.GetGold(b));
         }
@@ -112,7 +111,7 @@ namespace Mimic.Tests
             grid.TryPlace(sword, 0, 0, Rotation.Deg0);
             grid.TryPlace(shield, 1, 0, Rotation.Deg0);
             var result = AdjacencyResolver.Resolve(grid, i => i.Id, i => i.Gold, i => i.AcidCost,
-                                                   i => i.AdjacencyTarget, i => i.AdjacencyEffects);
+                                                   i => i.AdjacencyRules);
             Assert.AreEqual(10 + 12, result.TotalGold);
         }
     }

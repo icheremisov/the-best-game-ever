@@ -1,15 +1,15 @@
-id,name,description,shape,gold,acidCost,healOnDigest,cellsRestoredOnDigest,adjacencyTarget,adjacencyEffect,category,acidRestoreOnDigest,damageOnDigest,canReturnToBasket,glue,neighborGoldPct
-sword,Меч,"Острый, но тупой",X|X|X|X,10,3,0,0,,,normal,0,0,1,0,0
-shield,Щит,Защита от себя,XX|XX,8,4,5,0,sword,gold:+50%,normal,0,0,1,0,0
-barracuda,Барракуда,Ещё трепыхается,X.|XX|X.|X.,15,5,0,2,bread,acid:-30%,normal,0,0,1,0,0
-bread,Хлеб,Несвежий,XX,3,1,2,0,,,normal,0,0,1,0,0
-gem,Самоцвет,Дешёвый блеск,X,20,2,0,0,gem,gold:+25%,normal,0,0,1,0,0
-heart,Сердце,Бьётся,X,0,99,0,0,,,fixture,0,0,0,0,0
-stomach,Желудок,Урчит,XX|XX,0,99,0,0,,,fixture,0,0,0,0,0
-mimicburger,Мимик-бургер,Зубастый!,XX,0,3,8,0,,,reward,0,0,1,0,0
-acidbottle,Бутылка кислоты,Шипит,X|X,0,2,0,0,,,reward,6,0,1,0,0
-firecola,Огне-кола,Отрыжка пламенем,X,0,2,0,0,,,reward,0,0,1,0,0
-weight,Гиря 60кг,Тяжёлая,XX|XX|XX,0,5,0,0,,,punish,0,30,0,0,0
-poop,Какашка,Портит всё!,X,0,4,0,0,stomach,acid:+50%,punish,0,8,0,0,-50
-glue,Масса клея,Липкая,XX,0,3,0,0,,,punish,0,4,0,1,0
-tooth,Зуб с кариесом,Болит,X,0,9,0,0,,,punish,0,0,0,0,0
+id,name,description,shape,gold,acidCost,healOnDigest,cellsRestoredOnDigest,adjacencyEffect,category,acidRestoreOnDigest,damageOnDigest,canReturnToBasket,glue,neighborGoldPct
+sword,Меч,"Острый, но тупой",X|X|X|X,10,3,0,0,,normal,0,0,1,0,0
+shield,Щит,Защита от себя,XX|XX,8,4,5,0,sword|gold:+50%,normal,0,0,1,0,0
+barracuda,Барракуда,Ещё трепыхается,X.|XX|X.|X.,15,5,0,2,bread|acid:-30%,normal,0,0,1,0,0
+bread,Хлеб,Несвежий,XX,3,1,2,0,,normal,0,0,1,0,0
+gem,Самоцвет,Дешёвый блеск,X,20,2,0,0,gem|gold:+25%,normal,0,0,1,0,0
+heart,Сердце,Бьётся,X,0,99,0,0,,fixture,0,0,0,0,0
+stomach,Желудок,Урчит,XX|XX,0,99,0,0,,fixture,0,0,0,0,0
+mimicburger,Мимик-бургер,Зубастый!,XX,0,3,8,0,,reward,0,0,1,0,0
+acidbottle,Бутылка кислоты,Шипит,X|X,0,2,0,0,,reward,6,0,1,0,0
+firecola,Огне-кола,Отрыжка пламенем,X,0,2,0,0,,reward,0,0,1,0,0
+weight,Гиря 60кг,Тяжёлая,XX|XX|XX,0,5,0,0,,punish,0,30,0,0,0
+poop,Какашка,Портит всё!,X,0,4,0,0,stomach|acid:+50%,punish,0,8,0,0,-50
+glue,Масса клея,Липкая,XX,0,3,0,0,,punish,0,4,0,1,0
+tooth,Зуб с кариесом,Болит,X,0,9,0,0,,punish,0,0,0,0,0
