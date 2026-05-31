@@ -1,4 +1,4 @@
 day,goldQuota,startHp,startAcid,adventurerIds,goldDamageMult,ransomGold
-1,40,5,15,warrior;rogue;mage,1,200
-2,60,5,15,warrior;rogue;mage;warrior,1.5,200
+1,40,5,15,warrior;rogue;mage;warrior;rogue,1,200
+2,60,5,15,warrior;rogue;mage;warrior;rogue,1.5,200
 3,90,5,15,warrior;rogue;mage;warrior;rogue,2,200
