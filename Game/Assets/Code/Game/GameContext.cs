@@ -76,8 +76,7 @@ namespace Mimic.Game
                 v => v.Data.Id,
                 v => v.Data.Gold,
                 v => v.Data.AcidCost,
-                v => v.Data.AdjacencyTarget,
-                v => v.Data.AdjacencyEffects,
+                v => v.Data.AdjacencyRules,
                 v => v.Data.NeighborGoldPct);
             Resources.CurrentGoldInMimic = LastResolved.TotalGold;
             if (Hud != null) Hud.Refresh();
