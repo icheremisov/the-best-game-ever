@@ -137,6 +137,9 @@ namespace Mimic.Data
         {
             if (string.IsNullOrWhiteSpace(raw)) return Array.Empty<AdjacencyRule>();
 
+            // Переносы строк (из многострочного оформления в Google Docs) — как пробел.
+            raw = raw.Replace('\r', ' ').Replace('\n', ' ');
+
             var blocks = raw.Split(';');
             var rules = new List<AdjacencyRule>();
             foreach (var blockRaw in blocks)
@@ -578,6 +581,11 @@ if (AdjacencyEffect.Parse("gold:5%").Stackable) return Fail("без '*' Stackabl
 bool threw = false;
 try { AdjacencyRule.ParseRules("hat"); } catch (FormatException) { threw = true; }
 if (!threw) return Fail("блок без '|' не кинул FormatException");
+
+// многострочный вариант (как в Google Docs) парсится так же, как однострочный
+var multiline = AdjacencyRule.ParseRules("hat | gold:+50% , acid:+50% ;\n sheath , frog | gold:-50% ;\n *|gold:5%");
+if (multiline.Length != 3) return Fail($"многострочный: ожидал 3 блока, получил {multiline.Length}");
+if (multiline[1].Targets.Length != 2 || multiline[1].Targets[0] != "sheath") return Fail("многострочный блок 1 != sheath,frog");
 
 // --- Resolver ---
 LootData Mk(string id, int gold, int acid, AdjacencyRule[] rs) => new LootData {
