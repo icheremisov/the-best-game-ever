@@ -237,18 +237,35 @@ namespace Mimic.UI
 
         private string DescribeAdjacency(LootData data)
         {
-            if (string.IsNullOrEmpty(data.AdjacencyTarget) ||
-                data.AdjacencyEffects == null || data.AdjacencyEffects.Length == 0) return "";
+            if (data.AdjacencyRules == null || data.AdjacencyRules.Length == 0) return "";
 
-            string targetName = LookupName(data.AdjacencyTarget);
             var sb = new StringBuilder();
-            sb.Append($"Рядом с «{targetName}»:");
-            foreach (var fx in data.AdjacencyEffects)
+            foreach (var rule in data.AdjacencyRules)
             {
-                string kind = fx.Type == EffectType.Gold ? "цена" : "стоимость переваривания";
-                string sign = fx.Multiplier >= 0 ? "+" : "";
-                int pct = Mathf.RoundToInt(fx.Multiplier * 100f);
-                sb.Append($"\n   • {kind} {sign}{pct}%");
+                if (rule.Effects == null || rule.Effects.Length == 0) continue;
+                if (sb.Length > 0) sb.Append('\n');
+
+                string who;
+                if (rule.Wildcard)
+                {
+                    who = "прочими предметами";
+                }
+                else
+                {
+                    var names = new string[rule.Targets.Length];
+                    for (int i = 0; i < rule.Targets.Length; i++) names[i] = LookupName(rule.Targets[i]);
+                    who = "«" + string.Join("» или «", names) + "»";
+                }
+                sb.Append($"Рядом с {who}:");
+
+                foreach (var fx in rule.Effects)
+                {
+                    string kind = fx.Type == EffectType.Gold ? "цена" : "стоимость переваривания";
+                    string sign = fx.Multiplier >= 0 ? "+" : "";
+                    int pct = Mathf.RoundToInt(fx.Multiplier * 100f);
+                    string per = fx.Stackable ? " за каждый" : "";
+                    sb.Append($"\n   • {kind} {sign}{pct}%{per}");
+                }
             }
             return sb.ToString();
         }
