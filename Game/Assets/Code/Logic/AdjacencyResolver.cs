@@ -20,64 +20,80 @@ namespace Mimic.Logic
             Func<T, string> idOf,
             Func<T, int> baseGoldOf,
             Func<T, int> baseAcidOf,
-            Func<T, string> adjacencyTargetOf,
-            Func<T, AdjacencyEffect[]> adjacencyEffectsOf
+            Func<T, AdjacencyRule[]> adjacencyRulesOf
         ) where T : class
-            => Resolve(grid, idOf, baseGoldOf, baseAcidOf, adjacencyTargetOf, adjacencyEffectsOf, _ => 0);
+            => Resolve(grid, idOf, baseGoldOf, baseAcidOf, adjacencyRulesOf, _ => 0);
 
         public static AdjacencyResult<T> Resolve<T>(
             GridModel<T> grid,
             Func<T, string> idOf,
             Func<T, int> baseGoldOf,
             Func<T, int> baseAcidOf,
-            Func<T, string> adjacencyTargetOf,
-            Func<T, AdjacencyEffect[]> adjacencyEffectsOf,
+            Func<T, AdjacencyRule[]> adjacencyRulesOf,
             Func<T, int> neighborGoldPctOf
         ) where T : class
         {
             var result = new AdjacencyResult<T>();
 
-            // 1. Заполнить базовые значения
+            // 1. Базовые значения
             foreach (var item in grid.AllItems())
             {
                 result.EffectiveGold[item] = baseGoldOf(item);
                 result.EffectiveAcid[item] = baseAcidOf(item);
             }
 
-            // 2. Для каждого item найти 4-соседей и применить эффект
+            // 2. Входящие эффекты: суммируем множители по типам аддитивно, применяем к базе один раз
             foreach (var item in grid.AllItems())
             {
-                string target = adjacencyTargetOf(item);
-                if (string.IsNullOrEmpty(target)) continue;
-                var effects = adjacencyEffectsOf(item);
-                if (effects == null || effects.Length == 0) continue;
+                var rules = adjacencyRulesOf(item);
+                if (rules == null || rules.Length == 0) continue;
 
                 var neighbors = GetEdgeNeighbors(grid, item);
 
-                bool triggered = false;
-                foreach (var n in neighbors)
-                {
-                    if (n == item) continue; // самососедство требует другую копию
-                    if (idOf(n) == target) { triggered = true; break; }
-                }
-                if (!triggered) continue;
+                // множество явно названных таргетов предмета (для вайлдкарда)
+                var named = new HashSet<string>();
+                foreach (var rule in rules)
+                    if (!rule.Wildcard && rule.Targets != null)
+                        foreach (var t in rule.Targets) named.Add(t);
 
-                foreach (var fx in effects)
+                float sumGold = 0f;
+                float sumAcid = 0f;
+                foreach (var rule in rules)
                 {
-                    if (fx.Type == EffectType.Gold)
+                    if (rule.Effects == null || rule.Effects.Length == 0) continue;
+
+                    int count = 0;
+                    foreach (var n in neighbors)
                     {
-                        float newVal = result.EffectiveGold[item] * (1f + fx.Multiplier);
-                        result.EffectiveGold[item] = (int)System.Math.Max(0, System.Math.Round(newVal));
+                        if (ReferenceEquals(n, item)) continue;
+                        string nid = idOf(n);
+                        bool match = rule.Wildcard ? !named.Contains(nid) : ContainsId(rule.Targets, nid);
+                        if (match) count++;
                     }
-                    else if (fx.Type == EffectType.Acid)
+                    if (count == 0) continue;
+
+                    foreach (var fx in rule.Effects)
                     {
-                        float newVal = result.EffectiveAcid[item] * (1f + fx.Multiplier);
-                        result.EffectiveAcid[item] = (int)System.Math.Max(1, System.Math.Round(newVal));
+                        int times = fx.Stackable ? count : 1;
+                        float contribution = fx.Multiplier * times;
+                        if (fx.Type == EffectType.Gold) sumGold += contribution;
+                        else if (fx.Type == EffectType.Acid) sumAcid += contribution;
                     }
+                }
+
+                if (sumGold != 0f)
+                {
+                    float g = baseGoldOf(item) * (1f + sumGold);
+                    result.EffectiveGold[item] = (int)System.Math.Max(0, System.Math.Round(g));
+                }
+                if (sumAcid != 0f)
+                {
+                    float a = baseAcidOf(item) * (1f + sumAcid);
+                    result.EffectiveAcid[item] = (int)System.Math.Max(1, System.Math.Round(a));
                 }
             }
 
-            // 2b. Исходящий эффект: предмет с NeighborGoldPct != 0 снижает золото 4-соседей.
+            // 2b. Исходящий эффект: предмет с NeighborGoldPct != 0 меняет золото 4-соседей.
             foreach (var src in grid.AllItems())
             {
                 int pct = neighborGoldPctOf(src);
@@ -93,6 +109,13 @@ namespace Mimic.Logic
             // 3. Total (после исходящих эффектов)
             foreach (var v in result.EffectiveGold.Values) result.TotalGold += v;
             return result;
+        }
+
+        private static bool ContainsId(string[] ids, string id)
+        {
+            if (ids == null) return false;
+            for (int i = 0; i < ids.Length; i++) if (ids[i] == id) return true;
+            return false;
         }
 
         private static HashSet<T> GetEdgeNeighbors<T>(GridModel<T> grid, T item) where T : class
