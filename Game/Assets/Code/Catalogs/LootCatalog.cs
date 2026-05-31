@@ -27,14 +27,13 @@ namespace Mimic.Catalogs
                     AcidCost = int.Parse(row[5]),
                     HealOnDigest = int.Parse(row[6]),
                     CellsRestoredOnDigest = int.Parse(row[7]),
-                    AdjacencyTarget = row[8],
-                    AdjacencyEffects = AdjacencyEffect.ParseList(row[9]),
-                    Category = ParseCategory(Col(row, 10, "normal")),
-                    AcidRestoreOnDigest = int.Parse(Col(row, 11, "0")),
-                    DamageOnDigest = int.Parse(Col(row, 12, "0")),
-                    CanReturnToBasket = Col(row, 13, "1") != "0",
-                    IsGlue = Col(row, 14, "0") == "1",
-                    NeighborGoldPct = int.Parse(Col(row, 15, "0")),
+                    AdjacencyRules = AdjacencyRule.ParseRules(row[8]),
+                    Category = ParseCategory(Col(row, 9, "normal")),
+                    AcidRestoreOnDigest = int.Parse(Col(row, 10, "0")),
+                    DamageOnDigest = int.Parse(Col(row, 11, "0")),
+                    CanReturnToBasket = Col(row, 12, "1") != "0",
+                    IsGlue = Col(row, 13, "0") == "1",
+                    NeighborGoldPct = int.Parse(Col(row, 14, "0")),
                 };
                 d.IsFixture = d.Category == LootCategory.Fixture;
                 _byId[d.Id] = d;
