@@ -36,10 +36,16 @@ namespace Mimic.UI
         {
             if (lines == null || lines.Count == 0) { onCompleteCallback?.Invoke(); return; }
             if (root == null) { onCompleteCallback?.Invoke(); return; } // нет Canvas — не блокируем игру
+            if (root.activeSelf)
+            {
+                Debug.LogWarning("[DialogOverlay] Show вызван во время активного диалога — игнорирую повторный вызов");
+                return;
+            }
             chain = lines;
             index = 0;
             onComplete = onCompleteCallback;
             root.SetActive(true);
+            root.transform.SetAsLastSibling();
             ShowCurrent();
         }
 
