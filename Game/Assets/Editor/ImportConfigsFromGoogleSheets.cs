@@ -11,7 +11,7 @@ namespace Mimic.EditorTools
     // Downloads the game's CSV configs straight from the shared Google Sheet
     // and overwrites Assets/Resources/Configs/*.csv.txt.
     //
-    // day & adventurers are saved verbatim. loot is special: its sheet carries a
+    // day, adventurers & dialogs are saved verbatim. loot is special: its sheet carries a
     // checkbox shape "canvas" and authoring-friendly columns. The actual
     // sheet→runtime conversion (shape from canvas, columns mapped by header name,
     // multi-line adjacencyEffect) lives in Mimic.Logic.LootCanvasImporter so it is
@@ -24,11 +24,12 @@ namespace Mimic.EditorTools
         private const string DayGid = "0";
         private const string AdventurersGid = "1296203013";
         private const string LootGid = "492897648"; // sheet with the shape canvas
+        private const string DialogsGid = "915816125"; // trigger,text,icon — см. dialogs_README.md
 
         [MenuItem("Mimic/Import Configs from Google Sheets")]
         private static void Import()
         {
-            int ok = 0, total = 3;
+            int ok = 0, total = 4;
             try
             {
                 EditorUtility.DisplayProgressBar("Import Configs", "day.csv.txt", 0f / total);
@@ -45,6 +46,11 @@ namespace Mimic.EditorTools
                 if (TryDownload(LootGid, out string lootText, out err))
                 { WriteConfig("loot.csv.txt", LootCanvasImporter.BuildLootCsv(lootText)); ok++; }
                 else Debug.LogError($"[ImportConfigs] loot failed: {err}");
+
+                EditorUtility.DisplayProgressBar("Import Configs", "dialogs.csv.txt", 3f / total);
+                if (TryDownload(DialogsGid, out string dialogsText, out err))
+                { WriteConfig("dialogs.csv.txt", dialogsText); ok++; }
+                else Debug.LogError($"[ImportConfigs] dialogs failed: {err}");
             }
             finally
             {
