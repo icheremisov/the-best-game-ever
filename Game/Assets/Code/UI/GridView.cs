@@ -41,14 +41,29 @@ namespace Mimic.UI
             CellsRoot.sizeDelta = new Vector2(Width * CellSize, Height * CellSize);
         }
 
+        private static Sprite cellArtSprite;
+        private static bool cellArtLoaded;
+
+        // Художественный спрайт клетки (ячейка.png). Если есть — рисуем его,
+        // иначе падаем на процедурную рамку.
+        private static Sprite LoadCellArt()
+        {
+            if (!cellArtLoaded)
+            {
+                cellArtSprite = Resources.Load<Sprite>("Art/cell");
+                cellArtLoaded = true;
+            }
+            return cellArtSprite;
+        }
+
         private void BuildCells()
         {
             for (int i = CellsRoot.childCount - 1; i >= 0; i--)
                 DestroyImmediate(CellsRoot.GetChild(i).gameObject);
 
-            // Procedural cell sprite — opaque dark fill with a solid border on all 4 sides.
-            // Independent of screen resolution / Outline component glitches.
-            var cellSprite = CreateBorderedCellSprite((int)CellSize, BorderPixels, CellFillColor, CellBorderColor);
+            // Спрайт клетки: художественный ячейка.png, либо процедурная рамка как фоллбэк.
+            var cellSprite = LoadCellArt()
+                ?? CreateBorderedCellSprite((int)CellSize, BorderPixels, CellFillColor, CellBorderColor);
 
             for (int y = 0; y < Height; y++)
             {

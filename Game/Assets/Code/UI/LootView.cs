@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Mimic.Data;
 using Mimic.Logic;
 using UnityEngine;
@@ -99,12 +100,45 @@ namespace Mimic.UI
         // Per-shape-cell highlight overlays, indexed by pattern (r, c).
         // null at positions where the shape has no cell.
         private Image[,] cellHighlightImages;
+        private GameObject artOverlay; // инстанс арт-префаба предмета поверх формы
+
+        private static readonly Dictionary<string, GameObject> artPrefabCache = new Dictionary<string, GameObject>();
+        private static Sprite cellFullSprite;
+        private static bool cellFullLoaded;
+
+        // Арт-префаб предмета (Resources/Art/Loot/{id}.prefab). Кэшируем; null если префаба нет.
+        // Визуал (спрайт/масштаб/сдвиг/эффекты) настраивается художником прямо в префабе.
+        private static GameObject LoadArtPrefab(string id)
+        {
+            if (string.IsNullOrEmpty(id)) return null;
+            if (artPrefabCache.TryGetValue(id, out var p)) return p;
+            p = Resources.Load<GameObject>("Art/Loot/" + id);
+            artPrefabCache[id] = p;
+            return p;
+        }
+
+        // Нейтральный «занятый слот» для предметов с артом.
+        private static Sprite LoadCellFull()
+        {
+            if (!cellFullLoaded) { cellFullSprite = Resources.Load<Sprite>("Art/cell_full"); cellFullLoaded = true; }
+            return cellFullSprite;
+        }
 
         private void BuildCells()
         {
             for (int i = CellsRoot.childCount - 1; i >= 0; i--)
                 DestroyImmediate(CellsRoot.GetChild(i).gameObject);
+            artOverlay = null;
 
+            // Фикстуры (сердце/желудок) «вшиты в панель»: только спрайт, без клеток,
+            // подсветки, тултипа и интерактивности.
+            bool fixture = Data != null && Data.IsFixture;
+            var rootImg = GetComponent<Image>();
+            if (rootImg != null) rootImg.raycastTarget = !fixture;
+
+            var artPrefab = LoadArtPrefab(Data?.Id);
+            bool hasArt = artPrefab != null;
+            var cellFull = hasArt ? LoadCellFull() : null;
             var color = ColorForId(Data?.Id);
             var cells = Data.Shape.GetRotatedCells(CurrentRotation);
             int rows = cells.GetLength(0);
@@ -116,47 +150,96 @@ namespace Mimic.UI
 
             cellHighlightImages = new Image[rows, cols];
 
-            for (int r = 0; r < rows; r++)
+            // Слой 1 — фоны клеток (нейтральный слот с артом / цветная заливка без арта).
+            // Для фикстур не строим — они часть панели.
+            if (!fixture)
             {
-                for (int c = 0; c < cols; c++)
+                for (int r = 0; r < rows; r++)
                 {
-                    if (!cells[r, c]) continue;
-                    var go = Instantiate(CellPrefab, CellsRoot);
-                    var rt = (RectTransform)go.transform;
-                    rt.anchorMin = rt.anchorMax = new Vector2(0, 0);
-                    rt.pivot = new Vector2(0, 0);
-                    rt.sizeDelta = new Vector2(CellSize, CellSize);
-                    rt.anchoredPosition = new Vector2(c * CellSize, (rows - 1 - r) * CellSize);
-                    var img = go.GetComponent<Image>();
-                    if (img != null)
+                    for (int c = 0; c < cols; c++)
                     {
-                        img.sprite = null;
-                        img.color = color;
+                        if (!cells[r, c]) continue;
+                        var go = Instantiate(CellPrefab, CellsRoot);
+                        var rt = (RectTransform)go.transform;
+                        rt.anchorMin = rt.anchorMax = new Vector2(0, 0);
+                        rt.pivot = new Vector2(0, 0);
+                        rt.sizeDelta = new Vector2(CellSize, CellSize);
+                        rt.anchoredPosition = new Vector2(c * CellSize, (rows - 1 - r) * CellSize);
+                        var img = go.GetComponent<Image>();
+                        if (img != null)
+                        {
+                            img.sprite = cellFull;
+                            img.color = cellFull != null ? Color.white : color;
+                        }
+                        // Без Outline — рамку даёт сам спрайт клетки.
+                        var outline = go.GetComponent<Outline>();
+                        if (outline != null) Destroy(outline);
                     }
-                    var outline = go.GetComponent<Outline>();
-                    if (outline == null) outline = go.AddComponent<Outline>();
-                    outline.effectColor = new Color(0, 0, 0, 0.8f);
-                    outline.effectDistance = new Vector2(2, -2);
-
-                    // Highlight overlay on top of the cell — painted during drag,
-                    // ALWAYS rendered above the colored cell (and below the Label).
-                    cellHighlightImages[r, c] = CreateHighlightChild(go.transform);
                 }
             }
-            // Label stays at the very top (above all cells and highlights)
-            if (Label != null) Label.transform.SetAsLastSibling();
+
+            // Слой 2 — арт-префаб предмета поверх фонов клеток.
+            // Базовый (неповёрнутый) bounding box — арт вращаем вместе с формой.
+            if (hasArt)
+            {
+                var baseCells = Data.Shape.GetRotatedCells(Rotation.Deg0);
+                var baseSize = new Vector2(baseCells.GetLength(1) * CellSize, baseCells.GetLength(0) * CellSize);
+                artOverlay = CreateArtOverlay(artPrefab, size, baseSize, (int)CurrentRotation);
+            }
+
+            // Слой 3 — подсветка размещения (зелёная/красная), всегда поверх арта.
+            // Для фикстур не строим.
+            if (!fixture)
+            {
+                for (int r = 0; r < rows; r++)
+                    for (int c = 0; c < cols; c++)
+                    {
+                        if (!cells[r, c]) continue;
+                        cellHighlightImages[r, c] = CreateHighlightCell(c * CellSize, (rows - 1 - r) * CellSize);
+                    }
+            }
+
+            // Слой 4 — лейбл. С артом и у фикстур прячем (имя есть в тултипе).
+            if (Label != null)
+            {
+                Label.gameObject.SetActive(!hasArt && !fixture);
+                if (!hasArt && !fixture) Label.transform.SetAsLastSibling();
+            }
         }
 
-        private static Image CreateHighlightChild(Transform parent)
+        // Обёртка арта: центрирована по форме, размер = bbox в ориентации Deg0,
+        // повёрнута вместе с фигурой. Внутрь инстанцируется арт-префаб как есть —
+        // художник настраивает спрайт/масштаб/сдвиг/эффекты прямо в префабе.
+        // Префаб с Image на всю обёртку (stretch + preserveAspect) даёт авто-вписывание.
+        // footprint — повёрнутый bbox (для центра), baseSize — bbox в Deg0 (размер обёртки).
+        private GameObject CreateArtOverlay(GameObject prefab, Vector2 footprint, Vector2 baseSize, int rotSteps)
+        {
+            var go = new GameObject("Art", typeof(RectTransform));
+            var rt = (RectTransform)go.transform;
+            rt.SetParent(CellsRoot, worldPositionStays: false);
+            rt.anchorMin = rt.anchorMax = new Vector2(0, 0);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.sizeDelta = baseSize;
+            rt.localRotation = Quaternion.Euler(0, 0, -90f * (rotSteps & 3)); // по часовой
+            rt.anchoredPosition = footprint * 0.5f;
+
+            var inst = Instantiate(prefab, rt, false); // сохраняет локальный трансформ префаба
+            // Арт не перехватывает клики — взаимодействие идёт по клеткам/корню.
+            foreach (var g in inst.GetComponentsInChildren<Graphic>(true)) g.raycastTarget = false;
+            return go;
+        }
+
+        // Подсветка одной клетки — отдельным верхним слоем в CellsRoot (поверх арта).
+        private Image CreateHighlightCell(float x, float y)
         {
             var hgo = new GameObject("Highlight",
                 typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
             var hrt = (RectTransform)hgo.transform;
-            hrt.SetParent(parent, worldPositionStays: false);
-            hrt.anchorMin = Vector2.zero;
-            hrt.anchorMax = Vector2.one;
-            hrt.offsetMin = Vector2.zero;
-            hrt.offsetMax = Vector2.zero;
+            hrt.SetParent(CellsRoot, worldPositionStays: false);
+            hrt.anchorMin = hrt.anchorMax = new Vector2(0, 0);
+            hrt.pivot = new Vector2(0, 0);
+            hrt.sizeDelta = new Vector2(CellSize, CellSize);
+            hrt.anchoredPosition = new Vector2(x, y);
             var img = hgo.GetComponent<Image>();
             img.raycastTarget = false;
             img.color = new Color(0, 0, 0, 0);
@@ -216,7 +299,11 @@ namespace Mimic.UI
                 DragController.Instance?.OnLootClicked(this);
         }
 
-        public void OnPointerEnter(PointerEventData ev) => TooltipController.Instance?.Show(this);
+        public void OnPointerEnter(PointerEventData ev)
+        {
+            if (Data != null && Data.IsFixture) return; // фикстуры — часть панели, без тултипа
+            TooltipController.Instance?.Show(this);
+        }
         public void OnPointerExit(PointerEventData ev) => TooltipController.Instance?.Hide();
     }
 }

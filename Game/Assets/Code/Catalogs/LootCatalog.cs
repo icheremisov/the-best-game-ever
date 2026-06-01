@@ -35,6 +35,7 @@ namespace Mimic.Catalogs
                     NeighborGoldPct = int.Parse(Col(row, 13, "0")),
                     Attack = int.Parse(Col(row, 14, "0")),
                     AttackOnDigest = int.Parse(Col(row, 15, "0")),
+                    GoldOnDigestPct = int.Parse(Col(row, 16, "0")),
                 };
                 d.IsFixture = d.Category == LootCategory.Fixture;
                 _byId[d.Id] = d;

@@ -20,6 +20,8 @@ namespace Mimic.Game
         public GameResources Resources { get; private set; } = new GameResources();
         public AdjacencyResult<LootView> LastResolved { get; private set; }
 
+        public LootView StomachView { get; private set; } // желудок — drop-зона переваривания
+
         public System.Action GameFlowDeathHook; // GameFlow подписывается, чтобы ловить смерть от переваривания
 
         private void Awake()
@@ -55,6 +57,11 @@ namespace Mimic.Game
                 gameObject.AddComponent<CombatController>();
                 Debug.Log("[GameContext] Auto-added CombatController");
             }
+            if (DigestConfirmPopup.Instance == null)
+            {
+                gameObject.AddComponent<DigestConfirmPopup>();
+                Debug.Log("[GameContext] Auto-added DigestConfirmPopup");
+            }
         }
 
         // Ensures a Camera exists in the scene so Unity doesn't complain
@@ -89,19 +96,32 @@ namespace Mimic.Game
 
         public void Digest(LootView item) => TryDigestHeld(item);
 
+        // Эффективная стоимость переваривания (с учётом adjacency, напр. какашка +50% ЖС).
+        public int AcidCostFor(LootView item)
+        {
+            if (item == null || item.Data == null) return 0;
+            int cost = item.Data.AcidCost;
+            if (LastResolved != null && LastResolved.EffectiveAcid.TryGetValue(item, out var a)) cost = a;
+            return cost;
+        }
+
+        // Можно ли переварить (хватает ли ЖС). Фикстуры — нельзя.
+        public bool CanDigest(LootView item)
+        {
+            if (item == null || item.Data == null || item.Data.IsFixture) return false;
+            return Resources.CurrentAcid >= AcidCostFor(item);
+        }
+
+        // Золото, которое вернётся монеткой (% от базовой цены). 0 => монетки нет.
+        public int CoinGoldFor(LootData d)
+            => d == null ? 0 : Mathf.RoundToInt(d.Gold * d.GoldOnDigestPct / 100f);
+
         // Возвращает true если предмет переварен; false если не хватило ЖС (или это фикстура).
         // Работает и для предмета, уже вынутого из грида (drag-to-digest): Model.Remove — no-op.
         public bool TryDigestHeld(LootView item)
         {
-            if (item == null || item.Data == null || item.Data.IsFixture) return false;
-            int cost = item.Data.AcidCost;
-            if (LastResolved != null && LastResolved.EffectiveAcid.TryGetValue(item, out var a)) cost = a;
-            if (Resources.CurrentAcid < cost) return false;
-            Resources.CurrentAcid -= cost;
-            Resources.CurrentAcid += item.Data.AcidRestoreOnDigest; // кислота/мизим восполняет ЖС
-            Resources.CurrentHp += item.Data.HealOnDigest;          // бургер лечит
-            Resources.CurrentHp -= item.Data.DamageOnDigest;        // гиря/клей/какашка бьют
-            CombatController.Instance?.OnItemDigested(item.Data);
+            if (!CanDigest(item)) return false;
+            ApplyDigestEffects(item);
             MimicGrid.Model.Remove(item);
             Destroy(item.gameObject);
             OnGridChanged();
@@ -109,13 +129,64 @@ namespace Mimic.Game
             return true;
         }
 
+        // Подтверждённое переваривание из окна: применяет эффекты, удаляет предмет и
+        // отрыгивает монетку на (grid, cellX, cellY) — на месте переваренного предмета.
+        public void DigestConfirmed(LootView item, GridView grid, int cellX, int cellY)
+        {
+            if (item == null || item.Data == null) return;
+            int coinGold = CoinGoldFor(item.Data);
+            ApplyDigestEffects(item);
+            MimicGrid.Model.Remove(item); // no-op если предмет был held
+            Destroy(item.gameObject);
+            if (coinGold > 0 && grid != null) SpawnCoin(grid, cellX, cellY, coinGold);
+            OnGridChanged();
+            if (Resources.CurrentHp <= 0) GameFlowDeathHook?.Invoke();
+        }
+
+        private void ApplyDigestEffects(LootView item)
+        {
+            Resources.CurrentAcid -= AcidCostFor(item);
+            Resources.CurrentAcid += item.Data.AcidRestoreOnDigest; // кислота/мизим восполняет ЖС
+            Resources.CurrentHp += item.Data.HealOnDigest;          // бургер лечит
+            Resources.CurrentHp -= item.Data.DamageOnDigest;        // гиря/клей/какашка бьют
+            CombatController.Instance?.OnItemDigested(item.Data);
+        }
+
+        // Рантайм-предмет «монета»: 1 клетка, цена = переваренное золото, сдаётся в корзину.
+        private static LootData MakeCoinData(int gold) => new LootData
+        {
+            Id = "coin",
+            Name = "Монета",
+            Description = "Переваренное золото",
+            Shape = Shape.Parse("X"),
+            Gold = gold,
+            AcidCost = 0,
+            AdjacencyRules = System.Array.Empty<AdjacencyRule>(),
+            Category = LootCategory.Normal,
+            CanReturnToBasket = true,
+        };
+
+        private void SpawnCoin(GridView grid, int x, int y, int gold)
+        {
+            var view = SpawnLoot(MakeCoinData(gold), grid.CellsRoot);
+            if (grid.Model.TryPlace(view, x, y, Rotation.Deg0))
+            {
+                var rt = (RectTransform)view.transform;
+                rt.SetParent(grid.CellsRoot, worldPositionStays: false);
+                rt.anchorMin = rt.anchorMax = new Vector2(0, 0);
+                rt.pivot = new Vector2(0, 0);
+                rt.position = grid.CellRects[x, y].position;
+            }
+            else Destroy(view.gameObject);
+        }
+
         public void SpawnFixtures()
         {
             PlaceFixture("heart", 0, MimicGrid.Height - 2);
-            PlaceFixture("stomach", MimicGrid.Width - 3, 1);
+            StomachView = PlaceFixture("stomach", MimicGrid.Width - 3, 1);
         }
 
-        private void PlaceFixture(string id, int x, int y)
+        private LootView PlaceFixture(string id, int x, int y)
         {
             var data = LootCatalog.Get(id);
             var view = SpawnLoot(data, MimicGrid.CellsRoot);
@@ -126,8 +197,10 @@ namespace Mimic.Game
                 rt.anchorMin = rt.anchorMax = new Vector2(0, 0);
                 rt.pivot = new Vector2(0, 0);
                 rt.position = MimicGrid.CellRects[x, y].position;
+                return view;
             }
-            else Destroy(view.gameObject);
+            Destroy(view.gameObject);
+            return null;
         }
 
         public LootView SpawnLoot(LootData data, Transform parent)

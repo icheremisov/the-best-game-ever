@@ -27,12 +27,16 @@ namespace Mimic.Input
 
         public LootView Held { get; private set; }
 
-        // Зона "Переварить" поверх ЖС-бара — видна только во время перетаскивания.
+        // Зона "Переварить" поверх желудка — видна только во время перетаскивания.
         private RectTransform digestZone;
         private UnityEngine.UI.Image digestImg;
         private bool overDigest;
         private static readonly Color DigestIdleColor = new Color(0.30f, 0.85f, 0.45f, 0.30f);
         private static readonly Color DigestHotColor  = new Color(0.35f, 1.00f, 0.50f, 0.78f);
+
+        // Плашка "−N ЖС" у курсора, пока предмет над желудком.
+        private UnityEngine.UI.Text digestTag;
+        private RectTransform digestTagRt;
 
         private GridView originGrid;
         private int originX, originY;
@@ -83,6 +87,7 @@ namespace Mimic.Input
             overDigest = digestZone != null
                 && RectTransformUtility.RectangleContainsScreenPoint(digestZone, mouseScreen, UiCamera);
             if (digestImg != null) digestImg.color = overDigest ? DigestHotColor : DigestIdleColor;
+            UpdateDigestTag(mouseScreen);
 
             bool overAttack = !overDigest && IsOverAttackZone(mouseScreen);
             if (overDigest || overAttack)
@@ -103,19 +108,7 @@ namespace Mimic.Input
             {
                 if (overDigest)
                 {
-                    var item = Held;
-                    Held.ClearAllHighlights();
-                    if (GameContext.Instance != null && GameContext.Instance.TryDigestHeld(item))
-                    {
-                        if (VerboseLogs) Debug.Log($"[Drag] DIGEST {item.Data?.Id}");
-                        Held = null;
-                        hoverGrid = null;
-                    }
-                    else
-                    {
-                        if (VerboseLogs) Debug.Log("[Drag] DIGEST failed (не хватает ЖС) → возврат к origin");
-                        Cancel();
-                    }
+                    BeginDigestConfirm();
                     HideDigestZone();
                 }
                 else if (IsOverAttackZone(mouseScreen))
@@ -166,6 +159,116 @@ namespace Mimic.Input
         private void HideDigestZone()
         {
             if (digestZone != null) digestZone.gameObject.SetActive(false);
+            HideDigestTag();
+        }
+
+        // Релиз над желудком: вместо мгновенного переваривания открываем окно подтверждения.
+        // Предмет «висит» (уже снят с грида при Pick) до решения игрока.
+        private void BeginDigestConfirm()
+        {
+            var item = Held;
+            if (item == null) return;
+            var grid = originGrid;
+            int ox = originX, oy = originY;
+            Rotation rot = originRot;
+            item.ClearAllHighlights();
+
+            // Куда упадёт монетка — первая занятая клетка формы на месте предмета (она свободна после Pick).
+            FirstFilledCell(item, ox, oy, rot, out int coinX, out int coinY);
+
+            Held = null;
+            hoverGrid = null;
+            HideDigestTag();
+
+            var popup = Mimic.UI.DigestConfirmPopup.Instance;
+            if (popup == null)
+            {
+                // Окна нет — fallback на мгновенное переваривание.
+                GameContext.Instance?.DigestConfirmed(item, grid, coinX, coinY);
+                return;
+            }
+            if (VerboseLogs) Debug.Log($"[Drag] DIGEST confirm popup for {item.Data?.Id} (coin @ {grid?.name} {coinX},{coinY})");
+            popup.Show(item,
+                onConfirm: () =>
+                {
+                    if (VerboseLogs) Debug.Log($"[Drag] DIGEST confirmed {item.Data?.Id}");
+                    GameContext.Instance?.DigestConfirmed(item, grid, coinX, coinY);
+                },
+                onCancel: () =>
+                {
+                    if (VerboseLogs) Debug.Log($"[Drag] DIGEST cancelled → возврат {item.Data?.Id} к origin");
+                    ReturnToOrigin(item, grid, ox, oy, rot);
+                });
+        }
+
+        // Возврат конкретного предмета на его прежнее место (для отмены переваривания).
+        private void ReturnToOrigin(LootView item, GridView grid, int x, int y, Rotation rot)
+        {
+            if (item == null || grid == null) return;
+            item.SetRotation(rot);
+            grid.Model.TryPlace(item, x, y, rot);
+            SnapToGrid(item, grid, x, y);
+            item.SetCarried(false, 1f);
+            item.ClearAllHighlights();
+            GameContext.Instance?.OnGridChanged();
+        }
+
+        // Первая занятая клетка формы (в координатах грида) при размещении в (ox,oy) с поворотом rot.
+        private static void FirstFilledCell(LootView item, int ox, int oy, Rotation rot, out int gx, out int gy)
+        {
+            var cells = item.Shape.GetRotatedCells(rot);
+            int rows = cells.GetLength(0), cols = cells.GetLength(1);
+            for (int r = 0; r < rows; r++)
+                for (int c = 0; c < cols; c++)
+                    if (cells[r, c])
+                    {
+                        gx = ox + c;
+                        gy = oy + (rows - 1 - r); // совпадает с Y-флипом GridModel
+                        return;
+                    }
+            gx = ox; gy = oy;
+        }
+
+        private void UpdateDigestTag(Vector2 mouseScreen)
+        {
+            if (!overDigest || Held == null) { HideDigestTag(); return; }
+            EnsureDigestTag();
+            if (digestTag == null) return;
+            var ctx = GameContext.Instance;
+            int cost = ctx != null ? ctx.AcidCostFor(Held) : Held.Data.AcidCost;
+            bool canAfford = ctx != null && ctx.Resources.CurrentAcid >= cost;
+            digestTag.text = $"-{cost} ЖС";
+            digestTag.color = canAfford ? new Color(0.35f, 1f, 0.5f) : new Color(1f, 0.35f, 0.35f);
+            digestTagRt.gameObject.SetActive(true);
+            digestTagRt.SetAsLastSibling();
+            if (RectTransformUtility.ScreenPointToWorldPointInRectangle(DragLayer, mouseScreen, UiCamera, out var wp))
+                digestTagRt.position = wp + new Vector3(0f, 55f * DragLayer.lossyScale.y, 0f);
+        }
+
+        private void HideDigestTag()
+        {
+            if (digestTagRt != null) digestTagRt.gameObject.SetActive(false);
+        }
+
+        private void EnsureDigestTag()
+        {
+            if (digestTag != null || DragLayer == null) return;
+            var go = new GameObject("DigestCostTag",
+                typeof(RectTransform), typeof(CanvasRenderer), typeof(UnityEngine.UI.Text));
+            digestTagRt = (RectTransform)go.transform;
+            digestTagRt.SetParent(DragLayer, worldPositionStays: false);
+            digestTagRt.sizeDelta = new Vector2(170f, 46f);
+            digestTag = go.GetComponent<UnityEngine.UI.Text>();
+            digestTag.font = FontProvider.Default;
+            digestTag.fontSize = 30;
+            digestTag.fontStyle = FontStyle.Bold;
+            digestTag.alignment = TextAnchor.MiddleCenter;
+            digestTag.raycastTarget = false;
+            digestTag.horizontalOverflow = HorizontalWrapMode.Overflow;
+            digestTag.verticalOverflow = VerticalWrapMode.Overflow;
+            var outline = go.AddComponent<UnityEngine.UI.Outline>();
+            outline.effectColor = Color.black;
+            outline.effectDistance = new Vector2(2f, -2f);
         }
 
         private bool IsOverAttackZone(Vector2 mouseScreen)
@@ -175,44 +278,26 @@ namespace Mimic.Input
             return RectTransformUtility.RectangleContainsScreenPoint(combat.AttackZone, mouseScreen, UiCamera);
         }
 
-        // Создаёт оверлей "ПЕРЕВАРИТЬ" поверх ЖС-бара один раз (рантайм, без правок сцены).
+        // Создаёт подсветку-оверлей поверх желудка один раз (рантайм, без правок сцены).
+        // Виден только во время перетаскивания; ярчает при наведении предмета.
         private void EnsureDigestZone()
         {
             if (digestZone != null) return;
-            var hud = GameContext.Instance != null ? GameContext.Instance.Hud : null;
-            if (hud == null || hud.AcidBar == null) return;
+            var stomach = GameContext.Instance != null ? GameContext.Instance.StomachView : null;
+            if (stomach == null) return;
 
             var go = new GameObject("DigestDropZone",
                 typeof(RectTransform), typeof(CanvasRenderer), typeof(UnityEngine.UI.Image));
             digestZone = (RectTransform)go.transform;
-            digestZone.SetParent(hud.AcidBar.transform, worldPositionStays: false);
+            digestZone.SetParent(stomach.transform, worldPositionStays: false);
             digestZone.anchorMin = new Vector2(0f, 0f);
             digestZone.anchorMax = new Vector2(1f, 1f);
-            digestZone.offsetMin = new Vector2(0f, 0f);
-            digestZone.offsetMax = new Vector2(0f, 70f); // чуть выше бара — крупнее цель
+            digestZone.offsetMin = Vector2.zero;
+            digestZone.offsetMax = Vector2.zero;
             digestImg = go.GetComponent<UnityEngine.UI.Image>();
             digestImg.color = DigestIdleColor;
             digestImg.raycastTarget = false; // хит-тест делаем вручную
-
-            var lblGo = new GameObject("Label",
-                typeof(RectTransform), typeof(CanvasRenderer), typeof(UnityEngine.UI.Text));
-            var lrt = (RectTransform)lblGo.transform;
-            lrt.SetParent(digestZone, worldPositionStays: false);
-            lrt.anchorMin = Vector2.zero;
-            lrt.anchorMax = Vector2.one;
-            lrt.offsetMin = Vector2.zero;
-            lrt.offsetMax = Vector2.zero;
-            var lbl = lblGo.GetComponent<UnityEngine.UI.Text>();
-            lbl.text = "ПЕРЕВАРИТЬ";
-            lbl.font = FontProvider.Default;
-            lbl.fontSize = 24;
-            lbl.fontStyle = FontStyle.Bold;
-            lbl.alignment = TextAnchor.MiddleCenter;
-            lbl.color = Color.white;
-            lbl.raycastTarget = false;
-            var outline = lblGo.AddComponent<UnityEngine.UI.Outline>();
-            outline.effectColor = Color.black;
-            outline.effectDistance = new Vector2(2f, -2f);
+            digestZone.SetAsLastSibling();    // поверх арта желудка
 
             digestZone.gameObject.SetActive(false);
         }

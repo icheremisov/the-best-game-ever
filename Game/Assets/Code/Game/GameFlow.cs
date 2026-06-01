@@ -78,9 +78,8 @@ namespace Mimic.Game
         private void OnEatPressed()
         {
             var ctx = GameContext.Instance;
-            foreach (var lootId in current.LootIds)
+            foreach (var data in RollLoot(current))
             {
-                var data = LootCatalog.Get(lootId);
                 var view = ctx.SpawnLoot(data, ctx.AdventurerGrid.CellsRoot);
                 if (!TryPlaceFirstFit(ctx.AdventurerGrid, view))
                 {
@@ -90,6 +89,37 @@ namespace Mimic.Game
             }
             Hud.SetNextButtonEnabled(false);
             ctx.OnGridChanged();
+        }
+
+        // Набор лута приключенца под бюджет в клетках.
+        // budget <= 0 => выдаём весь LootIds (старое поведение / «выдать всё»).
+        // Иначе пока в пуле есть предмет, влезающий в остаток бюджета, берём случайный
+        // из подходящих по размеру (равновероятно, с повторами) и тратим его клетки.
+        private static List<LootData> RollLoot(AdventurerData adv)
+        {
+            var pool = new List<LootData>(adv.LootIds.Length);
+            foreach (var lootId in adv.LootIds)
+                pool.Add(LootCatalog.Get(lootId));
+
+            if (adv.Budget <= 0)
+                return pool;
+
+            var result = new List<LootData>();
+            int remaining = adv.Budget;
+            var fitting = new List<LootData>();
+            while (true)
+            {
+                fitting.Clear();
+                foreach (var data in pool)
+                    if (data.Shape.CellCount <= remaining)
+                        fitting.Add(data);
+                if (fitting.Count == 0) break;
+
+                var pick = fitting[Random.Range(0, fitting.Count)];
+                result.Add(pick);
+                remaining -= pick.Shape.CellCount;
+            }
+            return result;
         }
 
         private void OnBattlePressed()

@@ -9,12 +9,19 @@ namespace Mimic.Data
         public int Cols { get; }
         public bool[,] Cells { get; }
 
+        public int CellCount { get; }
+
         public Shape(bool[,] cells)
         {
             if (cells == null) throw new ArgumentNullException(nameof(cells));
             Cells = cells;
             Rows = cells.GetLength(0);
             Cols = cells.GetLength(1);
+
+            int count = 0;
+            foreach (var occupied in cells)
+                if (occupied) count++;
+            CellCount = count;
         }
 
         public static Shape Parse(string pattern)

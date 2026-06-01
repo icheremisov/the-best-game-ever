@@ -24,6 +24,7 @@ namespace Mimic.Catalogs
                     Battle = row.Length > 4 && (row[4] == "1" || row[4].ToLowerInvariant() == "true"),
                     Hp = row.Length > 5 && !string.IsNullOrEmpty(row[5]) ? int.Parse(row[5]) : 0,
                     Attack = row.Length > 6 && !string.IsNullOrEmpty(row[6]) ? int.Parse(row[6]) : 0,
+                    Budget = row.Length > 7 && !string.IsNullOrEmpty(row[7]) ? int.Parse(row[7]) : 0,
                 };
                 _byId[d.Id] = d;
             }

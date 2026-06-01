@@ -21,6 +21,7 @@ namespace Mimic.Data
         public bool IsGlue;               // масса клея
         public bool IsFixture;            // сердце/желудок: нельзя двигать/переваривать
         public int NeighborGoldPct;       // какашка: -50 => соседям -50% золота
+        public int GoldOnDigestPct;       // % от базовой цены, который вернётся монеткой при переваривании (0 = монетки нет)
 
         // --- бой ---
         public int Attack;          // >0 => предмет можно бросить во врага (урон), предмет исчезает
