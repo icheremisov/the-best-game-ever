@@ -1,4 +1,4 @@
 day,goldQuota,startHp,startAcid,adventurerIds,goldDamageMult,ransomGold,overlordHp,overlordAttack,biteDamage
-1,40,5,15,warrior;rogue;dragon;mage;rogue,1,200,20,2,5
-2,60,5,15,warrior;rogue;mage;warrior;rogue,1.5,200,28,3,5
-3,90,5,15,warrior;rogue;mage;warrior;rogue,2,200,40,4,5
+1,200,5,15,warrior;rogue;mage;warrior;rogue,1,200,20,2,5
+2,700,5,15,warrior;rogue;mage;warrior;rogue,1.5,200,30,3,5
+3,1500,5,15,warrior;rogue;mage;warrior;rogue,2,200,45,4,5
