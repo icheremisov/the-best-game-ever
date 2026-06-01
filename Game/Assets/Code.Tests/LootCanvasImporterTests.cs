@@ -12,7 +12,7 @@ namespace Mimic.Tests
             string[] cols =
             {
                 "id","name","description","shape","gold","acidCost","healOnDigest",
-                "cellsRestoredOnDigest","adjacencyEffect","category","acidRestoreOnDigest",
+                "adjacencyEffect","category","acidRestoreOnDigest",
                 "damageOnDigest","canReturnToBasket","glue","neighborGoldPct"
             };
             foreach (var r in CsvLoader.ParseAll(runtimeCsv))

@@ -8,9 +8,9 @@ namespace Mimic.Logic
     //
     // Source sheet layout:
     //   - Data columns are mapped BY HEADER NAME (order-independent): id, name,
-    //     description, gold, acidCost, healOnDigest, cellsRestoredOnDigest,
-    //     adjacencyEffect, category, acidRestoreOnDigest, damageOnDigest,
-    //     canReturnToBasket, glue, neighborGoldPct. Missing columns use defaults.
+    //     description, gold, acidCost, healOnDigest, adjacencyEffect, category,
+    //     acidRestoreOnDigest, damageOnDigest, canReturnToBasket, glue,
+    //     neighborGoldPct. Missing columns use defaults.
     //   - The shape "canvas" is a block of checkbox columns whose FIRST column
     //     carries the header "shape"; the canvas spans from there to the last column.
     //   - Each item occupies a block of rows: the id-row plus following rows with an
@@ -23,7 +23,7 @@ namespace Mimic.Logic
         internal static readonly string[] OutCols =
         {
             "id", "name", "description", "shape", "gold", "acidCost", "healOnDigest",
-            "cellsRestoredOnDigest", "adjacencyEffect", "category", "acidRestoreOnDigest",
+            "adjacencyEffect", "category", "acidRestoreOnDigest",
             "damageOnDigest", "canReturnToBasket", "glue", "neighborGoldPct"
         };
 
@@ -34,7 +34,7 @@ namespace Mimic.Logic
         private static readonly Dictionary<string, string> Defaults = new Dictionary<string, string>
         {
             { "gold", "0" }, { "acidCost", "0" }, { "healOnDigest", "0" },
-            { "cellsRestoredOnDigest", "0" }, { "adjacencyEffect", "" }, { "category", "normal" },
+            { "adjacencyEffect", "" }, { "category", "normal" },
             { "acidRestoreOnDigest", "0" }, { "damageOnDigest", "0" },
             { "canReturnToBasket", "1" }, { "glue", "0" }, { "neighborGoldPct", "0" },
         };

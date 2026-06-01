@@ -11,7 +11,6 @@ namespace Mimic.Data
         public int Gold;
         public int AcidCost;
         public int HealOnDigest;
-        public int CellsRestoredOnDigest;
         public AdjacencyRule[] AdjacencyRules;    // never null; пустой = нет свойства
 
         // --- голубой луп ---
