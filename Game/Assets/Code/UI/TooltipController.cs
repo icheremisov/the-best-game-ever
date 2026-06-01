@@ -18,6 +18,7 @@ namespace Mimic.UI
         public Text DescriptionText;
         public Text GoldText;
         public Text AcidText;
+        public Text CombatText;
         public Text AdjacencyText;
         public Camera UiCamera;
         public Canvas HostCanvas; // parent for auto-created Panel
@@ -87,6 +88,7 @@ namespace Mimic.UI
             DescriptionText = DescriptionText != null ? DescriptionText : CreateText("DescriptionText", DescriptionFontSize, FontStyle.Italic);
             GoldText        = GoldText        != null ? GoldText        : CreateText("GoldText",        StatFontSize,        FontStyle.Normal);
             AcidText        = AcidText        != null ? AcidText        : CreateText("AcidText",        StatFontSize,        FontStyle.Normal);
+            CombatText      = CombatText      != null ? CombatText      : CreateText("CombatText",      StatFontSize,        FontStyle.Normal);
             AdjacencyText   = AdjacencyText   != null ? AdjacencyText   : CreateText("AdjacencyText",   AdjacencyFontSize,   FontStyle.Normal);
 
             if (Panel.GetComponent<LayoutGroup>() == null)
@@ -111,6 +113,7 @@ namespace Mimic.UI
             EnforceParent(DescriptionText);
             EnforceParent(GoldText);
             EnforceParent(AcidText);
+            EnforceParent(CombatText);
             EnforceParent(AdjacencyText);
         }
 
@@ -209,6 +212,18 @@ namespace Mimic.UI
             GoldText.text = FormatStat("Цена", data.Gold, effGold, "зол.", betterIsHigher: true);
             AcidText.text = FormatStat("Переварить", data.AcidCost, effAcid, "сока", betterIsHigher: false);
 
+            string combatDesc = DescribeCombat(data);
+            if (string.IsNullOrEmpty(combatDesc))
+            {
+                CombatText.gameObject.SetActive(false);
+            }
+            else
+            {
+                CombatText.gameObject.SetActive(true);
+                CombatText.text = combatDesc;
+                CombatText.color = Color.white; // цвета задаются пер-строкой через rich text
+            }
+
             var ctx = GameContext.Instance;
             var neighborIds = (inMimic && ctx != null && ctx.MimicGrid != null && ctx.MimicGrid.Model != null)
                 ? AdjacencyResolver.NeighborIds(ctx.MimicGrid.Model, item, v => v.Data.Id)
@@ -231,6 +246,28 @@ namespace Mimic.UI
             PositionRightOf(item);
 
             if (VerboseLogs) Debug.Log($"[Tooltip] Show {data.Id} (inMimic={inMimic})");
+        }
+
+        // Боевые параметры: атака по врагу (бросок), урон врагу при переваривании,
+        // и самоурон мимику при переваривании. Показываем только ненулевые.
+        private string DescribeCombat(LootData d)
+        {
+            string boostHex = ColorUtility.ToHtmlStringRGB(BoostColor);
+            string penaltyHex = ColorUtility.ToHtmlStringRGB(PenaltyColor);
+            var sb = new StringBuilder();
+            if (d.Attack > 0)
+                sb.Append($"<color=#{boostHex}>Атака: {d.Attack}</color>");
+            if (d.AttackOnDigest > 0)
+            {
+                if (sb.Length > 0) sb.Append('\n');
+                sb.Append($"<color=#{boostHex}>Урон врагу при переваривании: {d.AttackOnDigest}</color>");
+            }
+            if (d.DamageOnDigest > 0)
+            {
+                if (sb.Length > 0) sb.Append('\n');
+                sb.Append($"<color=#{penaltyHex}>Самоурон при переваривании: {d.DamageOnDigest}</color>");
+            }
+            return sb.ToString();
         }
 
         private string FormatStat(string label, int baseVal, int effective, string unit, bool betterIsHigher)

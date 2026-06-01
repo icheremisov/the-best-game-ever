@@ -50,6 +50,11 @@ namespace Mimic.Game
                 gameObject.AddComponent<ContextMenuController>();
                 Debug.Log("[GameContext] Auto-added ContextMenuController");
             }
+            if (CombatController.Instance == null)
+            {
+                gameObject.AddComponent<CombatController>();
+                Debug.Log("[GameContext] Auto-added CombatController");
+            }
         }
 
         // Ensures a Camera exists in the scene so Unity doesn't complain
@@ -96,6 +101,7 @@ namespace Mimic.Game
             Resources.CurrentAcid += item.Data.AcidRestoreOnDigest; // кислота/мизим восполняет ЖС
             Resources.CurrentHp += item.Data.HealOnDigest;          // бургер лечит
             Resources.CurrentHp -= item.Data.DamageOnDigest;        // гиря/клей/какашка бьют
+            CombatController.Instance?.OnItemDigested(item.Data);
             MimicGrid.Model.Remove(item);
             Destroy(item.gameObject);
             OnGridChanged();
@@ -156,6 +162,12 @@ namespace Mimic.Game
                 Destroy(it.gameObject);
             }
             return total;
+        }
+
+        // Предмет, проатаковавший врага, исчезает (он уже снят с грида при Pick).
+        public void DestroyAttackedItem(LootView item)
+        {
+            if (item != null) Destroy(item.gameObject);
         }
     }
 }

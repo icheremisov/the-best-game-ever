@@ -9,5 +9,8 @@ namespace Mimic.Data
         public string[] AdventurerIds;
         public float GoldDamageMult;
         public int RansomGold;
+        public int OverlordHp;     // hp Хозяина в финальном бою
+        public int OverlordAttack; // атака Хозяина
+        public int BiteDamage;     // урон стандартной атаки «Кусь» (настройка ГД)
     }
 }
