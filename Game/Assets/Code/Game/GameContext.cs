@@ -35,6 +35,7 @@ namespace Mimic.Game
             LootCatalog.Load();
             AdventurerCatalog.Load();
             DayConfig.Load();
+            DialogCatalog.Load();
             Resources.StartDay(DayConfig.Current, firstDay: true);
         }
 
@@ -61,6 +62,11 @@ namespace Mimic.Game
             {
                 gameObject.AddComponent<DigestConfirmPopup>();
                 Debug.Log("[GameContext] Auto-added DigestConfirmPopup");
+            }
+            if (DialogOverlay.Instance == null)
+            {
+                gameObject.AddComponent<DialogOverlay>();
+                Debug.Log("[GameContext] Auto-added DialogOverlay");
             }
         }
 
