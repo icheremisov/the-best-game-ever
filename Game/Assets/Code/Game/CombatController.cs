@@ -52,6 +52,12 @@ namespace Mimic.Game
             RefreshUI();
             panelGo.SetActive(true);
 
+            // Порядок отрисовки: панель боя — поверх обычного UI, но СЛОЙ ПЕРЕТАСКИВАНИЯ —
+            // поверх панели, иначе таскаемый предмет уходит под зону атаки.
+            if (panelRect != null) panelRect.SetAsLastSibling();
+            var dragLayer = Mimic.Input.DragController.Instance != null ? Mimic.Input.DragController.Instance.DragLayer : null;
+            if (dragLayer != null) dragLayer.SetAsLastSibling();
+
             var ctx = GameContext.Instance;
             // спрятать правую сетку и кнопки дня на время боя
             if (ctx.AdventurerGrid != null) ctx.AdventurerGrid.gameObject.SetActive(false);
@@ -265,6 +271,10 @@ namespace Mimic.Game
             t.alignment = TextAnchor.MiddleCenter;
             t.color = Color.white;
             t.raycastTarget = false;
+            // Подписи живут на тонких полосах (кнопка/HP-бар) — без Overflow текст
+            // обрезается по высоте полосы и становится невидимым.
+            t.horizontalOverflow = HorizontalWrapMode.Overflow;
+            t.verticalOverflow = VerticalWrapMode.Overflow;
             var outline = go.AddComponent<Outline>();
             outline.effectColor = Color.black;
             outline.effectDistance = new Vector2(2, -2);
