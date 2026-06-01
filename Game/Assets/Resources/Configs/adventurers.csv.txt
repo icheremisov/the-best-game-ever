@@ -1,4 +1,4 @@
 id,name,phrase,lootIds
-warrior,Воин,definitely not a mimic!,sword;shield;bread
-rogue,Плут,я просто посмотрю,gem;gem;bread;barracuda
-mage,Маг,что в этом сундуке?,gem;shield;bread
+warrior,Воин,definitely not a mimic!,bow;crowbar;quiver;hat;magic_staff
+rogue,Плут,я просто посмотрю,anchor;expensive_amulet;pickaxe;walkstick;boot;knife;12;13;rich_wand
+mage,Маг,что в этом сундуке?,15;diamond;17;rich_diadem;flying_boots;20
