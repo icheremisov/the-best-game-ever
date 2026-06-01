@@ -54,7 +54,20 @@ namespace Mimic.Game
             Hud.SetNextButtonLabel("Следующий!");
             if (firstDay) ctx.SpawnFixtures(); // сердце/желудок ставятся один раз и живут в гриде мимика
             ctx.OnGridChanged();
-            BringNext();
+            PlayTrigger($"start_day_{DayConfig.Current.Day}", BringNext);
+        }
+
+        // Запускает цепочку диалога по ключу триггера; по завершении вызывает onDone.
+        // Если для триггера нет реплик — onDone вызывается сразу (без задержки).
+        private void PlayTrigger(string key, System.Action onDone)
+        {
+            var chain = Mimic.Catalogs.DialogCatalog.Get(key);
+            if (chain == null || chain.Count == 0) { onDone(); return; }
+            var lines = new System.Collections.Generic.List<Mimic.Data.DialogLine>(chain);
+            if (DialogOverlay.Instance != null)
+                DialogOverlay.Instance.Show(lines, onDone);
+            else
+                onDone();
         }
 
         private void BringNext()
@@ -165,7 +178,8 @@ namespace Mimic.Game
         private void EnterOverlord()
         {
             Phase = DayPhase.Overlord;
-            OverlordPopup.Show(OnSettled);
+            PlayTrigger($"end_day_{DayConfig.Current.Day}",
+                () => OverlordPopup.Show(OnSettled));
         }
 
         private void OnSettled()
