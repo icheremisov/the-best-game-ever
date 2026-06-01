@@ -24,7 +24,7 @@ namespace Mimic.EditorTools
         private const string DayGid = "0";
         private const string AdventurersGid = "1296203013";
         private const string LootGid = "492897648"; // sheet with the shape canvas
-        private const string DialogsGid = "915816125"; // trigger,text,icon — см. dialogs_README.md
+        private const string DialogsGid = "915816125"; // trigger,text,icon — см. docs/dialogs.md
 
         [MenuItem("Mimic/Import Configs from Google Sheets")]
         private static void Import()
