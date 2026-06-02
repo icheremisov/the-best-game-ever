@@ -1,5 +1,9 @@
 id,name,phrase,lootIds,battle,hp,attack,budget
-warrior,Воин,definitely not a mimic!,bow;crowbar;quiver;hat;magic_staff,0,0,0,24
-rogue,Плут,я просто посмотрю,anchor;expensive_amulet;pickaxe;walkstick;boot;knife;12;13;rich_wand,0,0,0,22
-mage,Маг,что в этом сундуке?,15;diamond;17;rich_diadem;flying_boots;20,0,0,0,22
-dragon,Дракончик,попробуй проглоти МЕНЯ,diamond;rich_diadem;hat,1,12,2,14
+random_full_1,Воин,definitely not a mimic!,bow;crowbar;quiver;hat;magic_staff;anchor;expensive_amulet;pickaxe;walkstick;boot;knife;scroll;horn;rich_wand;trap;diamond;diamond;rich_diadem;flying_boots;spyglass;quill,0,,,14
+random_full_2,Плут,я просто посмотрю,bow;crowbar;quiver;hat;magic_staff;anchor;expensive_amulet;pickaxe;walkstick;boot;knife;scroll;horn;rich_wand;trap;diamond;diamond;rich_diadem;flying_boots;spyglass;quill,0,,,23
+random_full_3,Маг,что в этом сундуке?,bow;crowbar;quiver;hat;magic_staff;anchor;expensive_amulet;pickaxe;walkstick;boot;knife;scroll;horn;rich_wand;trap;diamond;diamond;rich_diadem;flying_boots;spyglass;quill,0,,,27
+random_full_4,Воин,"Бать, тебе нормально?",bow;crowbar;quiver;hat;magic_staff;anchor;expensive_amulet;pickaxe;walkstick;boot;knife;scroll;horn;rich_wand;trap;diamond;diamond;rich_diadem;flying_boots;spyglass;quill,0,,,27
+random_full_5,Плут,Чел а ниче тот факт?,bow;crowbar;quiver;hat;magic_staff;anchor;expensive_amulet;pickaxe;walkstick;boot;knife;scroll;horn;rich_wand;trap;diamond;diamond;rich_diadem;flying_boots;spyglass;quill,0,,,23
+random_full_6,Маг,67,bow;crowbar;quiver;hat;magic_staff;anchor;expensive_amulet;pickaxe;walkstick;boot;knife;scroll;horn;rich_wand;trap;diamond;diamond;rich_diadem;flying_boots;spyglass;quill,0,,,23
+random_full_7,Плут,Я орал меня лутали,bow;crowbar;quiver;hat;magic_staff;anchor;expensive_amulet;pickaxe;walkstick;boot;knife;scroll;horn;rich_wand;trap;diamond;diamond;rich_diadem;flying_boots;spyglass;quill,0,,,20
+random_full_8,Маг,Сколько можно ,bow;crowbar;quiver;hat;magic_staff;anchor;expensive_amulet;pickaxe;walkstick;boot;knife;scroll;horn;rich_wand;trap;diamond;diamond;rich_diadem;flying_boots;spyglass;quill,0,,,20
