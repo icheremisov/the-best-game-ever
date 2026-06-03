@@ -190,6 +190,21 @@ namespace Mimic.Game
         {
             PlaceFixture("heart", 0, MimicGrid.Height - 2);
             StomachView = PlaceFixture("stomach", MimicGrid.Width - 3, 1);
+            HideFixtureCells();
+        }
+
+        // Прячем фоновые ячейки грида под клетками фикстур (сердце/желудок), чтобы
+        // пространство читалось как «дырка» в поле, а не как обычные ячейки.
+        private void HideFixtureCells()
+        {
+            if (MimicGrid == null || MimicGrid.Model == null || MimicGrid.CellRects == null) return;
+            for (int x = 0; x < MimicGrid.Width; x++)
+                for (int y = 0; y < MimicGrid.Height; y++)
+                {
+                    var occ = MimicGrid.Model.GetAt(x, y);
+                    if (occ != null && occ.Data != null && occ.Data.IsFixture && MimicGrid.CellRects[x, y] != null)
+                        MimicGrid.CellRects[x, y].gameObject.SetActive(false);
+                }
         }
 
         private LootView PlaceFixture(string id, int x, int y)

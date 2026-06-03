@@ -28,8 +28,10 @@ namespace Mimic.Input
         public LootView Held { get; private set; }
 
         // Зона "Переварить" поверх желудка — видна только во время перетаскивания.
+        // Накрывает РОВНО клетки, занятые формой желудка (вырез под форму), а не весь bbox.
         private RectTransform digestZone;
-        private UnityEngine.UI.Image digestImg;
+        private readonly System.Collections.Generic.List<UnityEngine.UI.Image> digestCellImgs =
+            new System.Collections.Generic.List<UnityEngine.UI.Image>();
         private bool overDigest;
         private static readonly Color DigestIdleColor = new Color(0.30f, 0.85f, 0.45f, 0.30f);
         private static readonly Color DigestHotColor  = new Color(0.35f, 1.00f, 0.50f, 0.78f);
@@ -84,9 +86,10 @@ namespace Mimic.Input
             // Зона "Переварить" активна только пока что-то перетаскиваем.
             EnsureDigestZone();
             if (digestZone != null) digestZone.gameObject.SetActive(true);
-            overDigest = digestZone != null
-                && RectTransformUtility.RectangleContainsScreenPoint(digestZone, mouseScreen, UiCamera);
-            if (digestImg != null) digestImg.color = overDigest ? DigestHotColor : DigestIdleColor;
+            overDigest = IsOverStomach(mouseScreen);
+            var digestColor = overDigest ? DigestHotColor : DigestIdleColor;
+            for (int i = 0; i < digestCellImgs.Count; i++)
+                if (digestCellImgs[i] != null) digestCellImgs[i].color = digestColor;
             UpdateDigestTag(mouseScreen);
 
             bool overAttack = !overDigest && IsOverAttackZone(mouseScreen);
@@ -278,28 +281,54 @@ namespace Mimic.Input
             return RectTransformUtility.RectangleContainsScreenPoint(combat.AttackZone, mouseScreen, UiCamera);
         }
 
-        // Создаёт подсветку-оверлей поверх желудка один раз (рантайм, без правок сцены).
+        // Создаёт подсветку-оверлей по клеткам желудка один раз (рантайм, без правок сцены).
         // Виден только во время перетаскивания; ярчает при наведении предмета.
+        // Оверлей строится по КАЖДОЙ клетке грида, занятой формой желудка — пустые клетки
+        // bbox желудка остаются обычными ячейками грида (туда можно класть предметы).
         private void EnsureDigestZone()
         {
             if (digestZone != null) return;
             var stomach = GameContext.Instance != null ? GameContext.Instance.StomachView : null;
-            if (stomach == null) return;
+            if (stomach == null || MimicGrid == null || MimicGrid.Model == null) return;
 
-            var go = new GameObject("DigestDropZone",
-                typeof(RectTransform), typeof(CanvasRenderer), typeof(UnityEngine.UI.Image));
+            var go = new GameObject("DigestDropZone", typeof(RectTransform));
             digestZone = (RectTransform)go.transform;
-            digestZone.SetParent(stomach.transform, worldPositionStays: false);
-            digestZone.anchorMin = new Vector2(0f, 0f);
-            digestZone.anchorMax = new Vector2(1f, 1f);
-            digestZone.offsetMin = Vector2.zero;
-            digestZone.offsetMax = Vector2.zero;
-            digestImg = go.GetComponent<UnityEngine.UI.Image>();
-            digestImg.color = DigestIdleColor;
-            digestImg.raycastTarget = false; // хит-тест делаем вручную
-            digestZone.SetAsLastSibling();    // поверх арта желудка
+            digestZone.SetParent(MimicGrid.CellsRoot, worldPositionStays: false);
+            digestZone.anchorMin = digestZone.anchorMax = new Vector2(0f, 0f);
+            digestZone.pivot = new Vector2(0f, 0f);
+            digestZone.anchoredPosition = Vector2.zero;
+            digestZone.sizeDelta = Vector2.zero;
 
+            float cs = MimicGrid.CellSize;
+            for (int x = 0; x < MimicGrid.Width; x++)
+                for (int y = 0; y < MimicGrid.Height; y++)
+                {
+                    if (MimicGrid.Model.GetAt(x, y) != stomach) continue;
+                    var cellGo = new GameObject($"DZ_{x}_{y}",
+                        typeof(RectTransform), typeof(CanvasRenderer), typeof(UnityEngine.UI.Image));
+                    var crt = (RectTransform)cellGo.transform;
+                    crt.SetParent(digestZone, worldPositionStays: false);
+                    crt.anchorMin = crt.anchorMax = new Vector2(0f, 0f);
+                    crt.pivot = new Vector2(0f, 0f);
+                    crt.sizeDelta = new Vector2(cs, cs);
+                    crt.anchoredPosition = new Vector2(x * cs, y * cs);
+                    var img = cellGo.GetComponent<UnityEngine.UI.Image>();
+                    img.color = DigestIdleColor;
+                    img.raycastTarget = false; // хит-тест делаем вручную
+                    digestCellImgs.Add(img);
+                }
+
+            digestZone.SetAsLastSibling();    // поверх арта/предметов грида
             digestZone.gameObject.SetActive(false);
+        }
+
+        // Курсор над клеткой грида, занятой формой желудка?
+        private bool IsOverStomach(Vector2 mouseScreen)
+        {
+            var stomach = GameContext.Instance != null ? GameContext.Instance.StomachView : null;
+            if (stomach == null || MimicGrid == null || MimicGrid.Model == null) return false;
+            if (!MimicGrid.ScreenToCell(mouseScreen, UiCamera, out int cx, out int cy)) return false;
+            return MimicGrid.Model.GetAt(cx, cy) == stomach;
         }
 
         private void FollowCursor(Vector2 mouseScreen)
@@ -457,23 +486,10 @@ namespace Mimic.Input
             if (hoverGrid != null && hoverCanPlace) TryDropAt(hoverGrid, hoverX, hoverY);
         }
 
-        private Mimic.Game.GameFlow flowCache;
-        private bool IsOverlordPhase()
-        {
-            if (flowCache == null) flowCache = UnityEngine.Object.FindFirstObjectByType<Mimic.Game.GameFlow>();
-            return flowCache != null && flowCache.Phase == Mimic.Game.DayPhase.Overlord;
-        }
-
         private void TryDropAt(GridView grid, int x, int y)
         {
-            // В обычной фазе нельзя возвращать лут из мимика в грид приключенца.
-            // В фазе Властелина правый грид — это КОРЗИНА, туда сдавать можно.
-            if (grid == AdventurerGrid && originGrid == MimicGrid && !IsOverlordPhase())
-            {
-                if (VerboseLogs) Debug.Log("[Drag] DROP rejected — can't move from mimic to adventurer grid");
-                return;
-            }
-
+            // Правый грид — временный инвентарь/корзина: разрешаем складывать туда лут
+            // из грида мимика в любой фазе (нужно для сортировки и временной разгрузки).
             if (grid.Model.TryPlace(Held, x, y, Held.CurrentRotation))
             {
                 Held.transform.SetParent(grid.CellsRoot, worldPositionStays: false);

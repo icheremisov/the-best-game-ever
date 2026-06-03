@@ -7,6 +7,7 @@ namespace Mimic.Data
         public string Id;
         public string Name;
         public string Description;
+        public string Group;   // сет/группа для цветовой кодировки имени (пусто = белое имя)
         public Shape Shape;
         public int Gold;
         public int AcidCost;

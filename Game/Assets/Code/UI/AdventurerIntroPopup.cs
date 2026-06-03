@@ -19,6 +19,7 @@ namespace Mimic.UI
         private Action onEat;
         private bool showing; // true пока попап вызван через Show — не даём Awake погасить себя
         private GameObject portraitInstance;    // текущий инстанс арт-префаба портрета
+        private GameObject blocker;              // фуллскрин-перехватчик кликов под попапом
 
         // Арт-префаб приключенца (Resources/Art/Adventurers/{id}.prefab). Кэшируем; null если нет.
         // Визуал (спрайт/масштаб/сдвиг) настраивается художником прямо в префабе — как у лута.
@@ -38,7 +39,7 @@ namespace Mimic.UI
             if (EatButton != null)
             {
                 PopupHelpers.EnsureButtonLabel(EatButton, "Сожрать", 28);
-                EatButton.onClick.AddListener(() => { onEat?.Invoke(); gameObject.SetActive(false); });
+                EatButton.onClick.AddListener(() => { var cb = onEat; onEat = null; HidePopup(); cb?.Invoke(); });
             }
             // Если объект сохранён в сцене неактивным, Awake выполнится при первом
             // Show()→SetActive(true); не гасим себя в этом случае.
@@ -54,7 +55,37 @@ namespace Mimic.UI
             if (EatButton != null)
                 PopupHelpers.EnsureButtonLabel(EatButton, eatLabel, 28);
             ShowPortrait(data.Id);
+
+            // Блокер перехватывает все клики мимо панели — иначе они проходят сквозь
+            // попап на кнопку «Следующий» в HUD под ним.
+            EnsureBlocker();
+            blocker.SetActive(true);
+            blocker.transform.SetAsLastSibling();
+            transform.SetAsLastSibling(); // панель — поверх блокера
             gameObject.SetActive(true);
+        }
+
+        private void HidePopup()
+        {
+            if (blocker != null) blocker.SetActive(false);
+            gameObject.SetActive(false);
+        }
+
+        private void EnsureBlocker()
+        {
+            if (blocker != null) return;
+            var parent = transform.parent; // Canvas
+            blocker = new GameObject("IntroPopupBlocker", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            var rt = (RectTransform)blocker.transform;
+            rt.SetParent(parent, worldPositionStays: false);
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+            var img = blocker.GetComponent<Image>();
+            img.color = new Color(0f, 0f, 0f, 0.5f);
+            img.raycastTarget = true;
+            blocker.SetActive(false);
         }
 
         private void ShowPortrait(string id)

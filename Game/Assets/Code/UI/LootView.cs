@@ -67,7 +67,7 @@ namespace Mimic.UI
             Label.text = text;
             Label.font = FontProvider.Default;
             Label.fontSize = LabelFontSize;
-            Label.color = Color.white;
+            Label.color = ColorForGroup(Data?.Group);
             Label.alignment = TextAnchor.MiddleCenter;
             Label.fontStyle = FontStyle.Bold;
             Label.raycastTarget = false;
@@ -95,6 +95,25 @@ namespace Mimic.UI
             int hash = 0;
             foreach (var ch in id) hash = (hash * 31 + ch) & 0x7FFFFFFF;
             return Palette[hash % Palette.Length];
+        }
+
+        // Цвет названия по группе (сету): у одной группы — один цвет. Цвет назначается
+        // палитрой в порядке первого появления группы (стабильно, без коллизий до 7 групп).
+        // Предметы без группы (пустое поле group в loot.csv) — белое имя.
+        private static readonly System.Collections.Generic.Dictionary<string, Color> groupColors =
+            new System.Collections.Generic.Dictionary<string, Color>();
+        private static int nextGroupColor;
+
+        private static Color ColorForGroup(string group)
+        {
+            if (string.IsNullOrEmpty(group)) return Color.white;
+            if (!groupColors.TryGetValue(group, out var color))
+            {
+                color = Palette[nextGroupColor % Palette.Length];
+                groupColors[group] = color;
+                nextGroupColor++;
+            }
+            return color;
         }
 
         // Per-shape-cell highlight overlays, indexed by pattern (r, c).
@@ -133,8 +152,11 @@ namespace Mimic.UI
             // Фикстуры (сердце/желудок) «вшиты в панель»: только спрайт, без клеток,
             // подсветки, тултипа и интерактивности.
             bool fixture = Data != null && Data.IsFixture;
+            // Корневой Image прозрачный и накрывает весь bbox формы (включая пустые клетки) —
+            // если он ловит клики, предмет «крадёт» клики по своим пустым клеткам у соседей.
+            // Поэтому raycast делаем ТОЛЬКО на заполненных клетках (см. ниже), а корень глушим.
             var rootImg = GetComponent<Image>();
-            if (rootImg != null) rootImg.raycastTarget = !fixture;
+            if (rootImg != null) rootImg.raycastTarget = false;
 
             var artPrefab = LoadArtPrefab(Data?.Id);
             bool hasArt = artPrefab != null;
@@ -170,6 +192,7 @@ namespace Mimic.UI
                         {
                             img.sprite = cellFull;
                             img.color = cellFull != null ? Color.white : color;
+                            img.raycastTarget = true; // клики по предмету ловят именно клетки формы
                         }
                         // Без Outline — рамку даёт сам спрайт клетки.
                         var outline = go.GetComponent<Outline>();
@@ -288,6 +311,9 @@ namespace Mimic.UI
             var cg = GetComponent<CanvasGroup>();
             if (cg == null) cg = gameObject.AddComponent<CanvasGroup>();
             cg.alpha = carried ? carriedAlpha : 1f;
+            // Пока тащим — не перехватываем клики/ховер, чтобы клетки грида и предметы
+            // под курсором были доступны (drop/hover считаются вручную в DragController).
+            cg.blocksRaycasts = !carried;
         }
 
         public void OnPointerDown(PointerEventData ev)
