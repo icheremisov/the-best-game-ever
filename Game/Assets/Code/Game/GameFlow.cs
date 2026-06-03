@@ -29,6 +29,7 @@ namespace Mimic.Game
         private AdventurerData current;
         private bool dayEnded;
         private DayStartSnapshot daySnapshot;
+        private System.Collections.Generic.List<LootSnapshotEntry> lootSnapshot;
 
         private void Start()
         {
@@ -44,6 +45,8 @@ namespace Mimic.Game
             if (EndPopup != null) EndPopup.Hide(); // спрятать экран конца дня при старте нового/переигранного дня
             if (!firstDay) ctx.Resources.StartDay(DayConfig.Current, firstDay: false);
             daySnapshot = ctx.Resources.SnapshotDayStart();
+            // Снимок лута на старте дня (до прихода приключенцев) — для отката при переигровке.
+            lootSnapshot = ctx.SnapshotLoot();
 
             Phase = DayPhase.Adventurers;
             dayEnded = false;
@@ -257,6 +260,7 @@ namespace Mimic.Game
         {
             var ctx = GameContext.Instance;
             ctx.Resources.RestoreDayStart(daySnapshot);
+            ctx.RestoreLoot(lootSnapshot); // вернуть лут гридов к состоянию на начало дня
             BeginDay(firstDay: false);
         }
 

@@ -6,6 +6,15 @@ using Mimic.UI;
 
 namespace Mimic.Game
 {
+    // Снимок одного выложенного предмета для отката дня (переигровка после проигрыша).
+    public class LootSnapshotEntry
+    {
+        public LootData Data;
+        public bool InMimic; // true = грид мимика, false = правый грид
+        public int X, Y;
+        public Rotation Rot;
+    }
+
     public class GameContext : MonoBehaviour
     {
         public static GameContext Instance { get; private set; }
@@ -230,6 +239,68 @@ namespace Mimic.Game
             var view = go.GetComponent<LootView>();
             view.Bind(data);
             return view;
+        }
+
+        // --- Снимок лута для переигровки дня ---
+
+        // Снимает весь выложенный лут обоих гридов (кроме фикстур) на момент вызова.
+        public System.Collections.Generic.List<LootSnapshotEntry> SnapshotLoot()
+        {
+            var list = new System.Collections.Generic.List<LootSnapshotEntry>();
+            CaptureGrid(MimicGrid, true, list);
+            CaptureGrid(AdventurerGrid, false, list);
+            return list;
+        }
+
+        private static void CaptureGrid(GridView grid, bool inMimic,
+            System.Collections.Generic.List<LootSnapshotEntry> list)
+        {
+            if (grid == null || grid.Model == null) return;
+            foreach (var item in grid.Model.AllItems())
+            {
+                if (item == null || item.Data == null || item.Data.IsFixture) continue;
+                if (grid.Model.TryGetPlacement(item, out int x, out int y, out var rot))
+                    list.Add(new LootSnapshotEntry { Data = item.Data, InMimic = inMimic, X = x, Y = y, Rot = rot });
+            }
+        }
+
+        // Сносит текущий лут (кроме фикстур) и восстанавливает из снимка. Фикстуры остаются.
+        public void RestoreLoot(System.Collections.Generic.List<LootSnapshotEntry> snap)
+        {
+            ClearLoot(MimicGrid);
+            ClearLoot(AdventurerGrid);
+            if (snap != null)
+            {
+                foreach (var e in snap)
+                {
+                    var grid = e.InMimic ? MimicGrid : AdventurerGrid;
+                    if (grid == null) continue;
+                    var view = SpawnLoot(e.Data, grid.CellsRoot);
+                    view.SetRotation(e.Rot);
+                    if (grid.Model.TryPlace(view, e.X, e.Y, e.Rot))
+                    {
+                        var rt = (RectTransform)view.transform;
+                        rt.SetParent(grid.CellsRoot, worldPositionStays: false);
+                        rt.anchorMin = rt.anchorMax = new Vector2(0, 0);
+                        rt.pivot = new Vector2(0, 0);
+                        rt.position = grid.CellRects[e.X, e.Y].position;
+                    }
+                    else Destroy(view.gameObject);
+                }
+            }
+            OnGridChanged();
+        }
+
+        private void ClearLoot(GridView grid)
+        {
+            if (grid == null || grid.Model == null) return;
+            var items = new System.Collections.Generic.List<LootView>(grid.Model.AllItems());
+            foreach (var it in items)
+            {
+                if (it == null || it.Data == null || it.Data.IsFixture) continue;
+                grid.Model.Remove(it);
+                Destroy(it.gameObject);
+            }
         }
 
         // Сдать предмет Властелину: золото (с adjacency) -> BankedGold, предмет удаляется.
