@@ -10,7 +10,8 @@ namespace Mimic.Logic
     //   - Data columns are mapped BY HEADER NAME (order-independent): id, name,
     //     description, gold, acidCost, healOnDigest, adjacencyEffect, category,
     //     acidRestoreOnDigest, damageOnDigest, canReturnToBasket, glue,
-    //     neighborGoldPct. Missing columns use defaults.
+    //     neighborGoldPct, attack, attackOnDigest, goldOnDigestPct, group.
+    //     Missing columns use defaults.
     //   - The shape "canvas" is a block of checkbox columns whose FIRST column
     //     carries the header "shape"; the canvas spans from there to the last column.
     //   - Each item occupies a block of rows: the id-row plus following rows with an
@@ -24,7 +25,8 @@ namespace Mimic.Logic
         {
             "id", "name", "description", "shape", "gold", "acidCost", "healOnDigest",
             "adjacencyEffect", "category", "acidRestoreOnDigest",
-            "damageOnDigest", "canReturnToBasket", "glue", "neighborGoldPct"
+            "damageOnDigest", "canReturnToBasket", "glue", "neighborGoldPct",
+            "attack", "attackOnDigest", "goldOnDigestPct", "group"
         };
 
         private const int ShapeOutIndex = 3; // позиция shape в OutCols
@@ -37,6 +39,8 @@ namespace Mimic.Logic
             { "adjacencyEffect", "" }, { "category", "normal" },
             { "acidRestoreOnDigest", "0" }, { "damageOnDigest", "0" },
             { "canReturnToBasket", "1" }, { "glue", "0" }, { "neighborGoldPct", "0" },
+            { "attack", "0" }, { "attackOnDigest", "0" }, { "goldOnDigestPct", "0" },
+            { "group", "" },
         };
 
         public static string BuildLootCsv(string sheetCsv)

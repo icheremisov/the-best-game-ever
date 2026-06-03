@@ -1,25 +1,25 @@
-id,name,description,shape,gold,acidCost,healOnDigest,adjacencyEffect,category,acidRestoreOnDigest,damageOnDigest,canReturnToBasket,glue,neighborGoldPct
-bow,Лук,,X.|XX|XX|X.,20,0,0,quiver | gold:+200%*; horn | gold:+200%*; walkstick | gold:+200%*,normal,0,0,1,0,0
-crowbar,Лом,,...X|XXXX|X...,25,0,0,boot | gold:+400%*; expensive_amulet | gold:-100%,normal,0,0,1,0,0
-quiver,Колчан,,.X.|.XX|XX.|.X.,30,0,0,bow | gold:+200%*; horn | gold:+200%*,normal,0,0,1,0,0
-hat,Шляпа,,.X.|XXX|XXX,140,0,0,"hat, magic_staff, anchor, flying_boots | gold:-50%",normal,0,0,1,0,0
-magic_staff,Магический посох,,XX|XX|.X|.X,120,0,0,"hat, magic_staff, anchor, flying_boots | gold:-50%",normal,0,0,1,0,0
-anchor,Молот молний,,.X.|XXX|.X.,100,0,0,"hat, magic_staff, anchor, flying_boots | gold:-50%",normal,0,0,1,0,0
-expensive_amulet,Дорогой амулет,,.X.|XXX|X..,25,0,0,quill | gold:+400%*,normal,0,0,1,0,0
-pickaxe,Кирка,,..X|XXX|..X,20,0,0,knife | gold:+400%*; rich_wand | gold:-100%,normal,0,0,1,0,0
-walkstick,Палка для ходьбы,,X|X|X|X,15,0,0,spyglass | gold:+200%*; quiver | gold:+200%*,normal,0,0,1,0,0
-boot,Сапог,,XX|X.,15,0,0,pickaxe | gold:+400%*,normal,0,0,1,0,0
-knife,Нож,,XXX,10,0,0,trap | gold:+400%*,normal,0,0,1,0,0
-scroll,Свиток,,XX,10,0,0,crowbar | gold:+400%*,normal,0,0,1,0,0
-horn,Горн,,XX|XX,20,0,0,bow | gold:+200%*; quiver | gold:+200%*,normal,0,0,1,0,0
-rich_wand,Богатый жезл,,XX|.X|.X,20,0,0,quill | gold:+400%*,normal,0,0,1,0,0
-trap,Капкан,,X.|XX|X.,15,0,0,scroll | gold:+400%*,normal,0,0,1,0,0
-diamond,Алмаз,,X,5,0,0,quill | gold:+400%*,normal,0,0,1,0,0
-quill,Дорогие чернила,,.XX|XXX|XX.,25,0,0,,normal,0,0,1,0,0
-rich_diadem,Богатая диадема,,.XX|XXX,25,0,0,quill | gold:+400%*,normal,0,0,1,0,0
-flying_boots,Летающие сапоги,,.X|XX|X.,80,0,0,"hat, magic_staff, anchor, flying_boots | gold:-50%; quiver | gold:+400%*",normal,0,0,1,0,0
-spyglass,Подзорная труба,,XXX,15,0,0,walkstick | gold:+200%*; bow | gold:+200%; rich_diadem | gold:-100%,normal,0,0,1,0,0
-heart,,,XX|XX,0,0,0,,fixture,0,0,1,0,0
-stomach,,,.X.|.XX|XXX,0,0,0,,fixture,0,0,1,0,0
-burger,Мимик-бургер,,XX,0,0,20,,reward,0,0,1,0,0
-poop,Отходы,,.X.|XXX|XXX,0,0,0,,normal,0,0,1,0,0
+id,name,description,shape,gold,acidCost,healOnDigest,adjacencyEffect,category,acidRestoreOnDigest,damageOnDigest,canReturnToBasket,glue,neighborGoldPct,attack,attackOnDigest,goldOnDigestPct,group
+bow,Лук,,X.|XX|XX|X.,20,0,0,quiver | gold:+200%*; horn | gold:+200%*; walkstick | gold:+200%*,normal,0,0,1,0,0,0,0,0,archery
+crowbar,Лом,,...X|XXXX|X...,25,0,0,boot | gold:+400%*; expensive_amulet | gold:-100%,normal,0,0,1,0,0,0,0,0,tools
+quiver,Колчан,,.X.|.XX|XX.|.X.,30,0,0,bow | gold:+200%*; horn | gold:+200%*,normal,0,0,1,0,0,0,0,0,archery
+hat,Шляпа,,.X.|XXX|XXX,140,0,0,"hat, magic_staff, anchor, flying_boots | gold:-50%",normal,0,0,1,0,0,0,0,0,magic
+magic_staff,Магический посох,,XX|XX|.X|.X,120,0,0,"hat, magic_staff, anchor, flying_boots | gold:-50%",normal,0,0,1,0,0,0,0,0,magic
+anchor,Молот молний,,.X.|XXX|.X.,100,0,0,"hat, magic_staff, anchor, flying_boots | gold:-50%",normal,0,0,1,0,0,0,0,0,magic
+expensive_amulet,Дорогой амулет,,.X.|XXX|X..,25,0,0,quill | gold:+400%*,normal,0,0,1,0,0,0,0,0,treasure
+pickaxe,Кирка,,..X|XXX|..X,20,0,0,knife | gold:+400%*; rich_wand | gold:-100%,normal,0,0,1,0,0,0,0,0,tools
+walkstick,Палка для ходьбы,,X|X|X|X,15,0,0,spyglass | gold:+200%*; quiver | gold:+200%*,normal,0,0,1,0,0,0,0,0,scout
+boot,Сапог,,XX|X.,15,0,0,pickaxe | gold:+400%*,normal,0,0,1,0,0,0,0,0,tools
+knife,Нож,,XXX,10,0,0,trap | gold:+400%*,normal,0,0,1,0,0,0,0,0,tools
+scroll,Свиток,,XX,10,0,0,crowbar | gold:+400%*,normal,0,0,1,0,0,0,0,0,tools
+horn,Горн,,XX|XX,20,0,0,bow | gold:+200%*; quiver | gold:+200%*,normal,0,0,1,0,0,0,0,0,archery
+rich_wand,Богатый жезл,,XX|.X|.X,20,0,0,quill | gold:+400%*,normal,0,0,1,0,0,0,0,0,treasure
+trap,Капкан,,X.|XX|X.,15,0,0,scroll | gold:+400%*,normal,0,0,1,0,0,0,0,0,tools
+diamond,Алмаз,,X,5,0,0,quill | gold:+400%*,normal,0,0,1,0,0,0,0,0,treasure
+quill,Дорогие чернила,,.XX|XXX|XX.,25,0,0,,normal,0,0,1,0,0,0,0,0,treasure
+rich_diadem,Богатая диадема,,.XX|XXX,25,0,0,quill | gold:+400%*,normal,0,0,1,0,0,0,0,0,treasure
+flying_boots,Летающие сапоги,,.X|XX|X.,80,0,0,"hat, magic_staff, anchor, flying_boots | gold:-50%; quiver | gold:+400%*",normal,0,0,1,0,0,0,0,0,magic
+spyglass,Подзорная труба,,XXX,15,0,0,walkstick | gold:+200%*; bow | gold:+200%; rich_diadem | gold:-100%,normal,0,0,1,0,0,0,0,0,scout
+heart,,,XX|XX,0,0,0,,fixture,0,0,1,0,0,0,0,0,
+stomach,,,.X.|.XX|XXX,0,0,0,,fixture,0,0,1,0,0,0,0,0,
+burger,Мимик-бургер,,XX,0,0,20,,reward,0,0,1,0,0,0,0,0,
+poop,Отходы,,.X.|XXX|XXX,0,0,0,,normal,0,0,1,0,0,0,0,0,
