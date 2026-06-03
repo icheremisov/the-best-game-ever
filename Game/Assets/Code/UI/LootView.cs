@@ -104,7 +104,7 @@ namespace Mimic.UI
             new System.Collections.Generic.Dictionary<string, Color>();
         private static int nextGroupColor;
 
-        private static Color ColorForGroup(string group)
+        public static Color ColorForGroup(string group)
         {
             if (string.IsNullOrEmpty(group)) return Color.white;
             if (!groupColors.TryGetValue(group, out var color))

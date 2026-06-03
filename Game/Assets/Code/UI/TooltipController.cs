@@ -196,7 +196,7 @@ namespace Mimic.UI
 
             var data = item.Data;
             NameText.text = data.Name;
-            NameText.color = ColorForId(data.Id);
+            NameText.color = LootView.ColorForGroup(data.Group); // цвет имени по сету (как на подписи предмета)
             DescriptionText.text = string.IsNullOrEmpty(data.Description) ? "" : $"«{data.Description}»";
             DescriptionText.gameObject.SetActive(!string.IsNullOrEmpty(data.Description));
 
@@ -335,22 +335,6 @@ namespace Mimic.UI
             if (ctx == null || ctx.MimicGrid == null) return false;
             foreach (var i in ctx.MimicGrid.Model.AllItems()) if (i == item) return true;
             return false;
-        }
-
-        private static readonly Color[] HashPalette =
-        {
-            new Color(0.95f, 0.55f, 0.55f, 1f),
-            new Color(0.55f, 0.80f, 0.95f, 1f),
-            new Color(0.55f, 0.90f, 0.65f, 1f),
-            new Color(0.95f, 0.85f, 0.45f, 1f),
-            new Color(0.80f, 0.65f, 0.95f, 1f),
-        };
-        private static Color ColorForId(string id)
-        {
-            if (string.IsNullOrEmpty(id)) return Color.white;
-            int hash = 0;
-            foreach (var ch in id) hash = (hash * 31 + ch) & 0x7FFFFFFF;
-            return HashPalette[hash % HashPalette.Length];
         }
 
         public void Hide()
