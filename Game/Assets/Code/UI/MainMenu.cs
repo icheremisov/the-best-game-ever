@@ -15,6 +15,7 @@ namespace Mimic.UI
             EnsureMainCamera();
             MusicPlayer.PlayMainTheme();
             FontProvider.ApplyToAllScene();
+            FontProvider.ApplyTmpToAllScene();
             if (StartButton != null)
                 StartButton.onClick.AddListener(() => SceneManager.LoadScene("Game"));
             if (QuitButton != null)

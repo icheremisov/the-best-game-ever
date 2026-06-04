@@ -27,13 +27,31 @@ namespace Mimic.UI
 
         private Text healthBarLabel;
         private Text acidBarLabel;
-        private Text surrenderLabel;
+
+        // Progress-fill children (Filled Image, заливка израсходованной части бара).
+        private Image healthProgress;
+        private Image acidProgress;
 
         private void Awake()
         {
-            ApplyFontSizes();
+            // ApplyFontSizes();
             EnsureBarLabels();
             EnsureButtonLabels();
+            CacheProgressBars();
+        }
+
+        private void CacheProgressBars()
+        {
+            // Видимые бары — Health/Acid (с дочерним Progress, тип Filled).
+            // HealthBar/AcidBar в инспекторе — легаси (неактивны), поэтому ищем по пути.
+            healthProgress = FindProgressImage("Canvas/Stage/HUDRoot/BottomBar/Health/Progress");
+            acidProgress = FindProgressImage("Canvas/Stage/HUDRoot/BottomBar/Acid/Progress");
+        }
+
+        private static Image FindProgressImage(string path)
+        {
+            var go = GameObject.Find(path);
+            return go != null ? go.GetComponent<Image>() : null;
         }
 
         private void ApplyFontSizes()
@@ -45,17 +63,19 @@ namespace Mimic.UI
 
         private void EnsureBarLabels()
         {
-            if (HealthBar != null) healthBarLabel = OrCreateChildLabel(HealthBar.transform, "HpLabel", "HP");
-            if (AcidBar != null) acidBarLabel = OrCreateChildLabel(AcidBar.transform, "AcidLabel", "ЖС");
+            // Подписи вешаем на новые бары Health/Acid; легаси HealthBar/AcidBar гасим.
+            if (HealthBar != null) HealthBar.gameObject.SetActive(false);
+            if (AcidBar != null) AcidBar.gameObject.SetActive(false);
+
+            var health = GameObject.Find("Canvas/Stage/HUDRoot/BottomBar/Health");
+            var acid = GameObject.Find("Canvas/Stage/HUDRoot/BottomBar/Acid");
+            if (health != null) healthBarLabel = OrCreateChildLabel(health.transform, "HpLabel", "HP");
+            if (acid != null) acidBarLabel = OrCreateChildLabel(acid.transform, "AcidLabel", "ЖС");
         }
 
         private void EnsureButtonLabels()
         {
-            if (SurrenderButton != null)
-            {
-                surrenderLabel = OrCreateChildLabel(SurrenderButton.transform, "Label", "Сдаться");
-                surrenderLabel.color = Color.white;
-            }
+            // У SurrenderButton подпись уже вшита в префаб (Text TMP) — свою не спавним.
             if (NextButton != null && NextButtonLabel == null)
             {
                 NextButtonLabel = OrCreateChildLabel(NextButton.transform, "Label", "Следующий!");
@@ -104,16 +124,18 @@ namespace Mimic.UI
         {
             var ctx = GameContext.Instance;
             if (ctx == null) return;
-            if (GoldInMimicText != null) GoldInMimicText.text = $"Цена: {ctx.Resources.CurrentGoldInMimic}";
-            if (DayQuotaText != null) DayQuotaText.text = $"Нужно: {ctx.Resources.DayQuota}";
+            if (GoldInMimicText != null) GoldInMimicText.text = $"{ctx.Resources.CurrentGoldInMimic}";
+            if (DayQuotaText != null) DayQuotaText.text = $"Нужно\n{ctx.Resources.DayQuota}";
 
             int hpMax = Mathf.Max(1, DayConfig.Current.StartHp);
             int acidMax = Mathf.Max(1, DayConfig.Current.StartAcid);
 
-            if (HealthBar != null)
-                HealthBar.fillAmount = Mathf.Clamp01(ctx.Resources.CurrentHp / (float)hpMax);
-            if (AcidBar != null)
-                AcidBar.fillAmount = Mathf.Clamp01(ctx.Resources.CurrentAcid / (float)acidMax);
+            float hpRatio = Mathf.Clamp01(ctx.Resources.CurrentHp / (float)hpMax);
+            float acidRatio = Mathf.Clamp01(ctx.Resources.CurrentAcid / (float)acidMax);
+
+            // Progress — заливка израсходованной части: fillAmount 0 => полный бар, 1 => пустой.
+            SetProgressFill(healthProgress, 1f - hpRatio);
+            SetProgressFill(acidProgress, 1f - acidRatio);
 
             if (healthBarLabel != null) healthBarLabel.text = $"HP: {ctx.Resources.CurrentHp}/{hpMax}";
             if (acidBarLabel != null) acidBarLabel.text = $"ЖС: {ctx.Resources.CurrentAcid}/{acidMax}";
@@ -121,13 +143,19 @@ namespace Mimic.UI
             UpdateSurrenderHighlight(ctx);
         }
 
+        private static void SetProgressFill(Image progress, float depleted)
+        {
+            if (progress == null) return;
+            progress.fillAmount = Mathf.Clamp01(depleted);
+        }
+
         public void SetHeroCounter(int current, int total)
         {
-            if (HeroCounterText != null) HeroCounterText.text = $"Герой {current}/{total}";
+            if (HeroCounterText != null) HeroCounterText.text = $"{current}/{total}";
         }
         public void SetDayCounter(int day)
         {
-            if (DayCounterText != null) DayCounterText.text = $"День {day}";
+            if (DayCounterText != null) DayCounterText.text = $"День\n{day}";
         }
         public void SetNextButtonLabel(string text)
         {

@@ -1,18 +1,21 @@
 using UnityEngine;
 using UnityEngine.UI;
+using TMPro;
 
 namespace Mimic.UI
 {
-    // Single source of truth for the UI font.
-    // Unity's built-in `LegacyRuntime.ttf` (a.k.a. Arial) does NOT include Cyrillic
-    // glyphs when the WebGL player runs in a browser — text rendered with it shows
-    // as missing-glyph boxes. Roboto-Regular ships with full Latin + Cyrillic,
-    // and we load it from Resources so it works in every player.
+    // Single source of truth for the UI font (legacy uGUI Text + TextMeshPro).
+    // Monomakh ships with full Cyrillic, so it renders correctly in every player
+    // (incl. WebGL, where the built-in LegacyRuntime/Arial lacks Cyrillic glyphs).
     public static class FontProvider
     {
-        private const string FontResourcePath = "Fonts/Roboto-Regular";
+        private const string FontResourcePath = "Fonts/Monomakh-Regular";
+        private const string TmpFontResourcePath = "Fonts/Monomakh SDF";
+
         private static Font cached;
         private static bool tried;
+        private static TMP_FontAsset cachedTmp;
+        private static bool triedTmp;
 
         public static Font Default
         {
@@ -25,17 +28,30 @@ namespace Mimic.UI
                 cached = Resources.Load<Font>(FontResourcePath);
                 if (cached == null)
                 {
-                    Debug.LogWarning($"[FontProvider] Could not load '{FontResourcePath}' — falling back to LegacyRuntime (no Cyrillic in WebGL).");
+                    Debug.LogWarning($"[FontProvider] Could not load '{FontResourcePath}' — falling back to LegacyRuntime.");
                     cached = Fallback();
                 }
                 return cached;
             }
         }
 
+        public static TMP_FontAsset DefaultTmp
+        {
+            get
+            {
+                if (cachedTmp != null) return cachedTmp;
+                if (triedTmp) return null;
+                triedTmp = true;
+                cachedTmp = Resources.Load<TMP_FontAsset>(TmpFontResourcePath);
+                if (cachedTmp == null)
+                    Debug.LogWarning($"[FontProvider] Could not load TMP font '{TmpFontResourcePath}'.");
+                return cachedTmp;
+            }
+        }
+
         private static Font Fallback() => Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
 
-        // Walks the scene once and re-points any Text whose font is the legacy fallback
-        // to FontProvider.Default. Cheap to run at scene start.
+        // Walks the scene once and re-points EVERY uGUI Text to FontProvider.Default.
         public static int ApplyToAllScene()
         {
             int swapped = 0;
@@ -48,17 +64,29 @@ namespace Mimic.UI
             #endif
             foreach (var t in texts)
             {
-                if (t == null) continue;
-                if (t.font == def) continue;
-                // Only swap default fallback fonts; leave intentional custom fonts alone.
-                if (t.font == null
-                    || t.font.name == "LegacyRuntime"
-                    || t.font.name == "Arial"
-                    || t.font.name == "ArialMT")
-                {
-                    t.font = def;
-                    swapped++;
-                }
+                if (t == null || t.font == def) continue;
+                t.font = def;
+                swapped++;
+            }
+            return swapped;
+        }
+
+        // Same for TextMeshPro — re-points EVERY TMP_Text to the Monomakh SDF asset.
+        public static int ApplyTmpToAllScene()
+        {
+            int swapped = 0;
+            var def = DefaultTmp;
+            if (def == null) return 0;
+            #if UNITY_2023_1_OR_NEWER
+            var texts = Object.FindObjectsByType<TMP_Text>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            #else
+            var texts = Resources.FindObjectsOfTypeAll<TMP_Text>();
+            #endif
+            foreach (var t in texts)
+            {
+                if (t == null || t.font == def) continue;
+                t.font = def;
+                swapped++;
             }
             return swapped;
         }

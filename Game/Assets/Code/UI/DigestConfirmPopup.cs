@@ -114,7 +114,7 @@ namespace Mimic.UI
             if (canvas == null) { Debug.LogError("[DigestConfirmPopup] Canvas не найден"); return; }
 
             // Затемнение на весь экран — блокирует клики по игре.
-            root = NewUI("DigestConfirmPopup", canvas.transform);
+            root = NewUI("DigestConfirmPopup", UiStageRoot.For(canvas));
             var dim = root.AddComponent<Image>();
             dim.color = new Color(0f, 0f, 0f, 0.55f);
             dim.raycastTarget = true;

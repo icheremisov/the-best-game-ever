@@ -53,6 +53,7 @@ namespace Mimic.Game
             queue = new Queue<string>(DayConfig.Current.AdventurerIds);
             totalInDay = DayConfig.Current.AdventurerIds.Length;
             processed = 0;
+            if (Mimic.UI.JarHeadView.Instance != null) Mimic.UI.JarHeadView.Instance.Clear();
             Hud.SetDayCounter(DayConfig.Current.Day);
             Hud.SetNextButtonLabel("Следующий!");
             if (firstDay) ctx.SpawnFixtures(); // сердце/желудок ставятся один раз и живут в гриде мимика
@@ -85,6 +86,8 @@ namespace Mimic.Game
             current = AdventurerCatalog.Get(id);
             processed++;
             Hud.SetHeroCounter(processed, totalInDay);
+            // Банку очищаем — голова появится только после «Сожрать» (когда лут на столе).
+            if (Mimic.UI.JarHeadView.Instance != null) Mimic.UI.JarHeadView.Instance.Clear();
             if (current.Battle)
                 IntroPopup.Show(current, OnBattlePressed, eatLabel: "В бой");
             else
@@ -104,6 +107,8 @@ namespace Mimic.Game
                 }
             }
             Hud.SetNextButtonEnabled(false);
+            // Лут героя выпал и доступен для перетаскивания — показываем его голову в банке.
+            if (Mimic.UI.JarHeadView.Instance != null) Mimic.UI.JarHeadView.Instance.Show(current.Id);
             ctx.OnGridChanged();
         }
 

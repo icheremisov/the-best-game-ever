@@ -92,7 +92,7 @@ namespace Mimic.UI
             // Затемняющая панель на весь экран; Button глотает клики и листает диалог.
             var panelGo = new GameObject("DialogOverlay_Auto",
                 typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));
-            panelGo.transform.SetParent(hostCanvas.transform, false);
+            panelGo.transform.SetParent(UiStageRoot.For(hostCanvas), false);
             var panelRt = (RectTransform)panelGo.transform;
             panelRt.anchorMin = Vector2.zero;
             panelRt.anchorMax = Vector2.one;

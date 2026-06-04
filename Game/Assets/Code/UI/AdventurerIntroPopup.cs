@@ -21,19 +21,6 @@ namespace Mimic.UI
         private GameObject portraitInstance;    // текущий инстанс арт-префаба портрета
         private GameObject blocker;              // фуллскрин-перехватчик кликов под попапом
 
-        // Арт-префаб приключенца (Resources/Art/Adventurers/{id}.prefab). Кэшируем; null если нет.
-        // Визуал (спрайт/масштаб/сдвиг) настраивается художником прямо в префабе — как у лута.
-        private static readonly Dictionary<string, GameObject> portraitCache = new Dictionary<string, GameObject>();
-
-        private static GameObject LoadPortraitPrefab(string id)
-        {
-            if (string.IsNullOrEmpty(id)) return null;
-            if (portraitCache.TryGetValue(id, out var p)) return p;
-            p = Resources.Load<GameObject>("Art/Adventurers/" + id);
-            portraitCache[id] = p;
-            return p;
-        }
-
         private void Awake()
         {
             if (EatButton != null)
@@ -91,26 +78,9 @@ namespace Mimic.UI
         private void ShowPortrait(string id)
         {
             if (portraitInstance != null) Destroy(portraitInstance);
-
-            var prefab = LoadPortraitPrefab(id);
-            bool hasArt = prefab != null && PortraitContainer != null;
-
-            if (hasArt)
-            {
-                portraitInstance = Instantiate(prefab, PortraitContainer, false);
-                var rt = portraitInstance.transform as RectTransform;
-                if (rt != null)
-                {
-                    rt.anchorMin = Vector2.zero;
-                    rt.anchorMax = Vector2.one;
-                    rt.offsetMin = Vector2.zero;
-                    rt.offsetMax = Vector2.zero;
-                }
-                // Портрет не перехватывает клики.
-                foreach (var g in portraitInstance.GetComponentsInChildren<Graphic>(true)) g.raycastTarget = false;
-            }
-
-            if (PortraitFallback != null) PortraitFallback.SetActive(!hasArt);
+            // Префаб или спрайт-интерфейс (Art/Adventurers/{id}); заглушка если арта нет.
+            portraitInstance = PortraitLoader.Instantiate(id, PortraitContainer);
+            if (PortraitFallback != null) PortraitFallback.SetActive(portraitInstance == null);
         }
     }
 }

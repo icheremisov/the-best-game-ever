@@ -40,8 +40,9 @@ namespace Mimic.Game
             MusicPlayer.PlayMainTheme();
             EnsureRuntimeControllers();
             int swappedFonts = Mimic.UI.FontProvider.ApplyToAllScene();
+            swappedFonts += Mimic.UI.FontProvider.ApplyTmpToAllScene();
             if (swappedFonts > 0)
-                Debug.Log($"[GameContext] Swapped legacy font on {swappedFonts} Text components (Cyrillic fix).");
+                Debug.Log($"[GameContext] Applied Monomakh font to {swappedFonts} text components.");
             LootCatalog.Load();
             AdventurerCatalog.Load();
             DayConfig.Load();
