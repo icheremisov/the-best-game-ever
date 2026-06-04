@@ -7,7 +7,7 @@ using Mimic.UI;
 
 namespace Mimic.Game
 {
-    public enum DayPhase { Adventurers, Overlord, RewardChoice, Transition, Combat }
+    public enum DayPhase { Adventurers, Reward, Combat }
 
     public class GameFlow : MonoBehaviour
     {
@@ -15,8 +15,6 @@ namespace Mimic.Game
         public AdventurerIntroPopup IntroPopup;
         public SurrenderConfirmPopup SurrenderPopup;
         public EndOfDayPopup EndPopup;
-        public OverlordPopup OverlordPopup;
-        public RewardChoicePopup RewardPopup;
 
         [Header("Scene refs")]
         public HudView Hud;
@@ -28,6 +26,7 @@ namespace Mimic.Game
         private int processed;
         private AdventurerData current;
         private bool dayEnded;
+        private int theftSeed = 1; // зерно кражи Властелином, инкрементится при каждом итоге дня
         private DayStartSnapshot daySnapshot;
         private System.Collections.Generic.List<LootSnapshotEntry> lootSnapshot;
 
@@ -56,6 +55,7 @@ namespace Mimic.Game
             if (Mimic.UI.JarHeadView.Instance != null) Mimic.UI.JarHeadView.Instance.Clear();
             Hud.SetDayCounter(DayConfig.Current.Day);
             Hud.SetNextButtonLabel("Следующий!");
+            Hud.EnterAdventurerButtons(); // вернуть NextButton, спрятать кнопки итогов
             if (firstDay) ctx.SpawnFixtures(); // сердце/желудок ставятся один раз и живут в гриде мимика
             ctx.OnGridChanged();
             PlayTrigger($"start_day_{DayConfig.Current.Day}", BringNext);
@@ -78,7 +78,7 @@ namespace Mimic.Game
         {
             if (queue.Count == 0)
             {
-                Hud.SetNextButtonLabel("Завершить день");
+                Hud.SetNextButtonLabel("Подвести итоги дня");
                 Hud.SetNextButtonEnabled(true);
                 return;
             }
@@ -108,7 +108,7 @@ namespace Mimic.Game
             }
             Hud.SetNextButtonEnabled(false);
             // Лут героя выпал и доступен для перетаскивания — показываем его голову в банке.
-            if (Mimic.UI.JarHeadView.Instance != null) Mimic.UI.JarHeadView.Instance.Show(current.Id);
+            if (Mimic.UI.JarHeadView.Instance != null) Mimic.UI.JarHeadView.Instance.Show(current.Name);
             ctx.OnGridChanged();
         }
 
@@ -179,52 +179,79 @@ namespace Mimic.Game
             if (ctx.AdventurerGrid.Model.FreeCellsCount < ctx.AdventurerGrid.Width * ctx.AdventurerGrid.Height)
                 return;
 
-            if (queue.Count == 0) EnterOverlord();
+            if (queue.Count == 0) Settle();
             else BringNext();
         }
 
-        private void EnterOverlord()
+        // «Подвести итоги дня»: проигрываем реплику Властелина, затем считаем итог без попапа.
+        private void Settle()
         {
-            Phase = DayPhase.Overlord;
-            PlayTrigger($"end_day_{DayConfig.Current.Day}",
-                () => OverlordPopup.Show(OnSettled));
+            Phase = DayPhase.Reward; // блокируем повторный NextOrEndDay
+            PlayTrigger($"end_day_{DayConfig.Current.Day}", DoSettleAndReward);
         }
 
-        private void OnSettled()
+        // Итог дня (бывшая логика OverlordPopup, но без окна и без ручной сдачи предметов):
+        // банк правой сетки (обычно пусто) → Властелин крадёт 1 предмет → урон за недобор квоты.
+        // Затем сразу выдаём предмет награды/штрафа в правую сетку и показываем 2 кнопки.
+        private void DoSettleAndReward()
         {
             var ctx = GameContext.Instance;
-            if (ctx.Resources.CurrentHp <= 0)
+            SfxPlayer.PlayGold();
+            ctx.BankAllInGrid(ctx.AdventurerGrid);
+
+            var stolen = TheftResolver.PickStealable(ctx.MimicGrid.Model, v => v, theftSeed++,
+                canSteal: v => !v.Data.IsFixture);
+            if (stolen != null)
+            {
+                ctx.MimicGrid.Model.Remove(stolen);
+                Destroy(stolen.gameObject);
+            }
+            ctx.OnGridChanged();
+
+            var r = ctx.Resources;
+            int dmg = Settlement.Damage(r.TotalGold, r.DayQuota, DayConfig.Current.GoldDamageMult);
+            if (dmg > 0)
+            {
+                r.CurrentHp -= dmg;
+                SfxPlayer.PlayMimicDamage();
+            }
+
+            if (r.CurrentHp <= 0)
             {
                 EndDeath();
                 return;
             }
-            EnterReward();
+
+            bool win = r.TotalGold >= r.DayQuota;
+            SpawnRewardItem(win);
+            EnterRewardButtons();
         }
 
-        private void EnterReward()
+        // Кладёт предмет награды (квота закрыта) или штрафа (недобор) в правую сетку —
+        // игрок сам решит, тащить его в мимика или нет. Если в категории предметов нет
+        // (напр. punish-каталог пуст) — не спавним ничего.
+        private void SpawnRewardItem(bool win)
         {
-            Phase = DayPhase.RewardChoice;
             var ctx = GameContext.Instance;
-            bool win = ctx.Resources.TotalGold >= ctx.Resources.DayQuota;
-            RewardPopup.Show(win, onTaken: OnRewardTaken, onOvereat: EndBurst);
+            var pool = LootCatalog.ByCategory(win ? LootCategory.Reward : LootCategory.Punish);
+            if (pool.Count == 0) return;
+            var data = pool[Random.Range(0, pool.Count)];
+            var view = ctx.SpawnLoot(data, ctx.AdventurerGrid.CellsRoot);
+            if (!TryPlaceFirstFit(ctx.AdventurerGrid, view))
+            {
+                Destroy(view.gameObject);
+                return;
+            }
+            ctx.OnGridChanged();
         }
 
-        private void OnRewardTaken()
+        // Две кнопки на месте «Следующий»: «Начать следующий день» (нет в последний день)
+        // и «Бросить вызов».
+        private void EnterRewardButtons()
         {
-            EnterTransition();
-        }
-
-        private void EnterTransition()
-        {
-            Phase = DayPhase.Transition;
-            var ctx = GameContext.Instance;
-            bool canRansom = ctx.Resources.TotalGold >= DayConfig.Current.RansomGold;
-            bool hasNextDay = !DayConfig.IsLastDay;
-            EndPopup.ShowTransition(
-                hasNextDay: hasNextDay,
-                canRansom: canRansom,
+            Hud.ShowRewardButtons(
                 onNextDay: GoNextDay,
-                onRansom: EndRansomWin,
+                nextDayEnabled: !DayConfig.IsLastDay,
                 onChallenge: OnChallengeOverlord);
         }
 
@@ -233,8 +260,6 @@ namespace Mimic.Game
             DayConfig.Advance();
             BeginDay(firstDay: false);
         }
-
-        private void EndRansomWin() => EndPopup.ShowRansomWin();
 
         private void OnChallengeOverlord()
         {
