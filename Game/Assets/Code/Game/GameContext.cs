@@ -164,7 +164,11 @@ namespace Mimic.Game
             SfxPlayer.PlayDigest();
             Resources.CurrentAcid -= AcidCostFor(item);
             Resources.CurrentAcid += item.Data.AcidRestoreOnDigest; // кислота/мизим восполняет ЖС
-            Resources.CurrentHp += item.Data.HealOnDigest;          // бургер лечит
+            if (item.Data.HealOnDigest > 0)                          // бургер лечит, но не выше макс. HP
+            {
+                int maxHp = Mathf.Max(1, DayConfig.Current.StartHp);
+                Resources.CurrentHp = Mathf.Min(maxHp, Resources.CurrentHp + item.Data.HealOnDigest);
+            }
             Resources.CurrentHp -= item.Data.DamageOnDigest;        // гиря/клей/какашка бьют
             CombatController.Instance?.OnItemDigested(item.Data);
         }
