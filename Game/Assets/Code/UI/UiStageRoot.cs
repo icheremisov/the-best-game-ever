@@ -16,5 +16,13 @@ namespace Mimic.UI
             if (cached != null) return cached;
             return fallback != null ? fallback.transform : null;
         }
+
+        // Поднять UIStage в самый верх Canvas, чтобы модалки в нём рисовались поверх
+        // DragLayer/боевой панели. Бой делает dragLayer.SetAsLastSibling() и не возвращает
+        // порядок — без этого попапы после боя уходят под перетаскиваемый предмет.
+        public static void BringToFront()
+        {
+            if (cached != null) cached.SetAsLastSibling();
+        }
     }
 }

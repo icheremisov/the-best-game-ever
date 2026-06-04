@@ -45,6 +45,7 @@ namespace Mimic.UI
             index = 0;
             onComplete = onCompleteCallback;
             root.SetActive(true);
+            UiStageRoot.BringToFront(); // UIStage поверх DragLayer (бой мог поднять слой драга)
             root.transform.SetAsLastSibling();
             ShowCurrent();
         }

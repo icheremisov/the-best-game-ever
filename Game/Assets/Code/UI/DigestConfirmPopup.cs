@@ -85,6 +85,7 @@ namespace Mimic.UI
             confirmButton.interactable = canAfford;
             confirmLabel.color = canAfford ? Color.black : new Color(0f, 0f, 0f, 0.35f);
 
+            UiStageRoot.BringToFront(); // UIStage поверх DragLayer (бой мог поднять слой драга)
             root.transform.SetAsLastSibling();
             root.SetActive(true);
         }

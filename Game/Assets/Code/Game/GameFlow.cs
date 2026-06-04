@@ -187,6 +187,8 @@ namespace Mimic.Game
         private void Settle()
         {
             Phase = DayPhase.Reward; // блокируем повторный NextOrEndDay
+            // Чистим голову героя из банки — на диалоге с Властелином банка должна быть пустой.
+            if (Mimic.UI.JarHeadView.Instance != null) Mimic.UI.JarHeadView.Instance.Clear();
             PlayTrigger($"end_day_{DayConfig.Current.Day}", DoSettleAndReward);
         }
 

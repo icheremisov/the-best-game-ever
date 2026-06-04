@@ -47,6 +47,7 @@ namespace Mimic.UI
             // попап на кнопку «Следующий» в HUD под ним.
             EnsureBlocker();
             blocker.SetActive(true);
+            UiStageRoot.BringToFront(); // UIStage поверх DragLayer (бой мог поднять слой драга)
             blocker.transform.SetAsLastSibling();
             transform.SetAsLastSibling(); // панель — поверх блокера
             gameObject.SetActive(true);

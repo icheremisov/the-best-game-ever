@@ -31,6 +31,8 @@ namespace Mimic.Game
         private Text enemyAtkText;
         private Button biteButton;
         private Text biteLabel;
+        private Image previewImage; // портрет героя/властелина вверху панели
+        private Image flashImage;   // фон панели — мигает при атаке врага
         private GameObject panelGo;
 
         private const float EnemyTurnDelay = 0.45f;
@@ -162,6 +164,14 @@ namespace Mimic.Game
         private void RefreshUI()
         {
             if (panelGo == null) return;
+            if (previewImage != null)
+            {
+                // Имя врага резолвится в ключ арта внутри PortraitLoader
+                // («Властелин»→overlord, «Воин»→warrior и т.д.).
+                var sprite = enemy != null ? PortraitLoader.LoadSprite(enemy.Name) : null;
+                previewImage.sprite = sprite;
+                previewImage.enabled = sprite != null;
+            }
             if (nameText != null) nameText.text = enemy != null ? enemy.Name : "";
             if (enemy != null && enemy.MaxHp > 0)
             {
@@ -175,9 +185,7 @@ namespace Mimic.Game
         private void FlashEnemyAttack()
         {
             // дешёвый фидбэк: мигнуть фоном панели
-            if (panelRect == null) return;
-            var img = panelRect.GetComponent<Image>();
-            if (img != null) StartCoroutine(Flash(img));
+            if (flashImage != null) StartCoroutine(Flash(flashImage));
         }
 
         private IEnumerator Flash(Image img)
@@ -189,6 +197,9 @@ namespace Mimic.Game
         }
 
         // Боевая панель строится один раз поверх правой сетки (рантайм, без правок сцены).
+        // Предпочитаем настраиваемый префаб (Resources/UI/CombatPanel); если его нет —
+        // строим UI в коде (фолбэк). В обоих случаях позиция/размер корня
+        // подгоняются под прямоугольник правой сетки — это же зона броска предмета.
         private void EnsureUI()
         {
             if (panelGo != null) return;
@@ -197,10 +208,47 @@ namespace Mimic.Game
             var canvas = anchor != null ? anchor.GetComponentInParent<Canvas>() : UnityEngine.Object.FindFirstObjectByType<Canvas>();
             if (canvas == null) { Debug.LogError("[Combat] нет Canvas для боевой панели"); return; }
 
-            panelGo = new GameObject("CombatPanel", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-            panelRect = (RectTransform)panelGo.transform;
-            panelRect.SetParent(canvas.transform, worldPositionStays: false);
-            // повторить прямоугольник правой сетки, если он есть; иначе правая половина экрана
+            var prefab = Resources.Load<GameObject>("UI/CombatPanel");
+            if (prefab != null && BuildFromPrefab(prefab, canvas, ctx, anchor)) return;
+
+            BuildInCode(canvas, ctx, anchor);
+        }
+
+        // Инстанцирует префаб боевой панели и берёт ссылки из CombatPanelView.
+        private bool BuildFromPrefab(GameObject prefab, Canvas canvas, GameContext ctx, RectTransform anchor)
+        {
+            var inst = UnityEngine.Object.Instantiate(prefab, canvas.transform, false);
+            inst.name = "CombatPanel_Auto";
+            var view = inst.GetComponent<CombatPanelView>();
+            if (view == null || view.BiteButton == null)
+            {
+                Debug.LogWarning("[Combat] В префабе нет CombatPanelView/кнопки «Кусь» — фолбэк на код-билд");
+                Destroy(inst);
+                return false;
+            }
+
+            panelGo = inst;
+            panelRect = (RectTransform)inst.transform;
+            SnapToGrid(panelRect, ctx, anchor);
+
+            previewImage = view.Preview;
+            nameText = view.NameText;
+            enemyAtkText = view.EnemyAtkText;
+            enemyHpFill = view.EnemyHpFill;
+            enemyHpLabel = view.EnemyHpLabel;
+            biteButton = view.BiteButton;
+            biteLabel = view.BiteLabel;
+            flashImage = view.Background != null ? view.Background : panelRect.GetComponent<Image>();
+
+            biteButton.onClick.AddListener(Bite);
+
+            panelGo.SetActive(false);
+            return true;
+        }
+
+        // Позиция/размер корня = прямоугольник правой сетки (или правая половина экрана).
+        private static void SnapToGrid(RectTransform panelRect, GameContext ctx, RectTransform anchor)
+        {
             if (anchor != null)
             {
                 panelRect.position = anchor.position;
@@ -218,19 +266,39 @@ namespace Mimic.Game
                 panelRect.anchorMax = new Vector2(0.95f, 0.85f);
                 panelRect.offsetMin = panelRect.offsetMax = Vector2.zero;
             }
+        }
+
+        private void BuildInCode(Canvas canvas, GameContext ctx, RectTransform anchor)
+        {
+            panelGo = new GameObject("CombatPanel", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            panelRect = (RectTransform)panelGo.transform;
+            panelRect.SetParent(canvas.transform, worldPositionStays: false);
+            SnapToGrid(panelRect, ctx, anchor);
             var bg = panelGo.GetComponent<Image>();
             bg.color = new Color(0.15f, 0.10f, 0.12f, 0.95f);
             bg.raycastTarget = false; // хит-тест броска — вручную в DragController
+            flashImage = bg;
 
-            nameText = MakeText(panelRect, "Name", new Vector2(0.5f, 0.92f), 34, FontStyle.Bold);
-            enemyAtkText = MakeText(panelRect, "Atk", new Vector2(0.5f, 0.80f), 26, FontStyle.Normal);
+            // Портрет героя/властелина — вверху панели, над именем.
+            var previewGo = new GameObject("Preview", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            var previewRt = (RectTransform)previewGo.transform;
+            previewRt.SetParent(panelRect, false);
+            previewRt.anchorMin = new Vector2(0.28f, 0.56f);
+            previewRt.anchorMax = new Vector2(0.72f, 0.94f);
+            previewRt.offsetMin = previewRt.offsetMax = Vector2.zero;
+            previewImage = previewGo.GetComponent<Image>();
+            previewImage.preserveAspect = true;
+            previewImage.raycastTarget = false;
+
+            nameText = MakeText(panelRect, "Name", new Vector2(0.5f, 0.50f), 34, FontStyle.Bold);
+            enemyAtkText = MakeText(panelRect, "Atk", new Vector2(0.5f, 0.42f), 26, FontStyle.Normal);
 
             // HP-бар врага
             var barGo = new GameObject("EnemyHpBar", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
             var barRt = (RectTransform)barGo.transform;
             barRt.SetParent(panelRect, false);
-            barRt.anchorMin = new Vector2(0.1f, 0.66f);
-            barRt.anchorMax = new Vector2(0.9f, 0.74f);
+            barRt.anchorMin = new Vector2(0.1f, 0.30f);
+            barRt.anchorMax = new Vector2(0.9f, 0.38f);
             barRt.offsetMin = barRt.offsetMax = Vector2.zero;
             barGo.GetComponent<Image>().color = new Color(0.25f, 0.25f, 0.28f, 1f);
 
