@@ -8,7 +8,7 @@ using Mimic.UI;
 
 namespace Mimic.Game
 {
-    // Пошаговый бой поверх сцены сортировки. Враг ходит первым; ход игрока
+    // Пошаговый бой поверх сцены сортировки. Игрок ходит первым; ход игрока
     // завершает только атака («Кусь» или бросок предмета с attack>0).
     public class CombatController : MonoBehaviour
     {
@@ -46,7 +46,7 @@ namespace Mimic.Game
             this.onWin = onWin;
             this.onLose = onLose;
             IsActive = true;
-            PlayerTurn = false;
+            PlayerTurn = true;
 
             EnsureUI();
             RefreshUI();
@@ -67,7 +67,7 @@ namespace Mimic.Game
                 if (ctx.Hud.SurrenderButton != null) ctx.Hud.SurrenderButton.gameObject.SetActive(false);
             }
 
-            StartCoroutine(EnemyTurn()); // враг ходит первым
+            // Игрок ходит первым — ждём его атаку (PlayerTurn уже true).
         }
 
         private IEnumerator EnemyTurn()
