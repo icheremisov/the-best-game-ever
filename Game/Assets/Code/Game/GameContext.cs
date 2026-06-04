@@ -37,6 +37,7 @@ namespace Mimic.Game
         {
             Instance = this;
             EnsureMainCamera();
+            MusicPlayer.PlayMainTheme();
             EnsureRuntimeControllers();
             int swappedFonts = Mimic.UI.FontProvider.ApplyToAllScene();
             if (swappedFonts > 0)
@@ -160,6 +161,7 @@ namespace Mimic.Game
 
         private void ApplyDigestEffects(LootView item)
         {
+            SfxPlayer.PlayDigest();
             Resources.CurrentAcid -= AcidCostFor(item);
             Resources.CurrentAcid += item.Data.AcidRestoreOnDigest; // кислота/мизим восполняет ЖС
             Resources.CurrentHp += item.Data.HealOnDigest;          // бургер лечит

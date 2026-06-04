@@ -146,6 +146,7 @@ namespace Mimic.Input
                     // Release in an invalid location → return the item to where it came from.
                     if (VerboseLogs)
                         Debug.Log($"[Drag] DROP invalid → return to origin (hover={(hoverGrid != null ? hoverGrid.name : "none")} canPlace={hoverCanPlace})");
+                    SfxPlayer.PlayNegative();
                     Cancel();
                     HideDigestZone();
                 }
@@ -154,6 +155,7 @@ namespace Mimic.Input
             {
                 // RMB during hold = explicit cancel.
                 if (VerboseLogs) Debug.Log("[Drag] CANCEL via RMB");
+                SfxPlayer.PlayNegative();
                 Cancel();
                 HideDigestZone();
             }
@@ -449,6 +451,7 @@ namespace Mimic.Input
             Held = item;
             item.SetCarried(true, CarriedAlpha);
             item.transform.SetParent(DragLayer, worldPositionStays: false);
+            SfxPlayer.PlayItemHandle(item.Data);
 
             if (VerboseLogs)
                 Debug.Log($"[Drag] PICK {item.Data?.Id ?? item.name} from {grid.name} at ({originX},{originY}) rot={originRot} offset=({pickOffsetX},{pickOffsetY})");
@@ -484,6 +487,11 @@ namespace Mimic.Input
         {
             // Click hit another item — try to drop onto current hover cell (already computed).
             if (hoverGrid != null && hoverCanPlace) TryDropAt(hoverGrid, hoverX, hoverY);
+            else
+            {
+                SfxPlayer.PlayNegative();
+                Cancel();
+            }
         }
 
         private void TryDropAt(GridView grid, int x, int y)
@@ -497,6 +505,7 @@ namespace Mimic.Input
                 Held.SetCarried(false, 1f);
                 if (VerboseLogs)
                     Debug.Log($"[Drag] DROP OK → {grid.name} ({x},{y}) rot={Held.CurrentRotation}");
+                SfxPlayer.PlayItemDrop(Held.Data);
                 Held.ClearAllHighlights(); // clear shape-cell tints BEFORE losing the reference
                 Held = null;
                 hoverGrid = null;
@@ -506,6 +515,8 @@ namespace Mimic.Input
             {
                 if (VerboseLogs)
                     Debug.LogWarning($"[Drag] TryPlace failed at {grid.name} ({x},{y}) rot={Held.CurrentRotation}");
+                SfxPlayer.PlayNegative();
+                Cancel();
             }
         }
 

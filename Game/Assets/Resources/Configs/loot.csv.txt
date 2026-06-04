@@ -7,7 +7,7 @@ magic_staff,Магический посох,Ты не пройдешь!,XX|XX|.X
 anchor,Молот молний,Поднимет только достойный,.X.|XXX|.X.,100,0,0,"hat, magic_staff, anchor, flying_boots | gold:-50%",normal,0,0,1,0,0,18,0,0,magic
 expensive_amulet,Дорогой амулет,Предыдущий владелец зачах,.X.|XXX|X..,25,0,0,quill | gold:+400%*,normal,0,0,1,0,0,0,0,0,treasure
 pickaxe,Кирка,Копатель оффлайн,..X|XXX|..X,20,0,0,knife | gold:+400%*; rich_wand | gold:-100%,normal,0,0,1,0,0,12,0,0,tools
-walkstick,Палка для ходьбы,"Палок много, но эта моя",X|X|X|X,15,0,0,spyglass | gold:+200%*; quiver | gold:+200%*,normal,0,0,1,0,0,8,0,0,scout
+walkstick,Палка для ходьбы,"Палок много, но эта моя",X|X|X|X,15,0,0,spyglass | gold:+200%*; quiver | gold:+200%*,normal,0,0,1,0,0,8,0,0,archery
 boot,Сапог,Попадаются только правые,XX|X.,15,0,0,pickaxe | gold:+400%*,normal,0,0,1,0,0,0,0,0,tools
 knife,Нож,Зародыш катаны,XXX,10,0,0,trap | gold:+400%*,normal,0,0,1,0,0,9,0,0,tools
 scroll,Свиток,Шестой древний свиток,XX,10,0,0,crowbar | gold:+400%*,normal,0,0,1,0,0,0,0,0,tools
@@ -18,7 +18,7 @@ diamond,Алмаз,Собери из трех кирку,X,5,0,0,quill | gold:+4
 quill,Дорогие чернила,Самая дорогая субстанция в мире,.XX|XXX|XX.,25,0,0,,normal,0,0,1,0,0,0,0,0,treasure
 rich_diadem,Богатая диадема,Тяжела,.XX|XXX,25,0,0,quill | gold:+400%*,normal,0,0,1,0,0,0,0,0,treasure
 flying_boots,Летающие сапоги,Гули-гули...,.X|XX|X.,80,0,0,"hat, magic_staff, anchor, flying_boots | gold:-50%; quiver | gold:+400%*",normal,0,0,1,0,0,0,0,0,magic
-spyglass,Подзорная труба,Вижу лут,XXX,15,0,0,walkstick | gold:+200%*; bow | gold:+200%; rich_diadem | gold:-100%,normal,0,0,1,0,0,0,0,0,scout
+spyglass,Подзорная труба,Вижу лут,XXX,15,0,0,walkstick | gold:+200%*; bow | gold:+200%; rich_diadem | gold:-100%,normal,0,0,1,0,0,0,0,0,archery
 heart,,Сердце мимика,XX|XX,0,0,0,,fixture,0,0,1,0,0,0,0,0,
 stomach,,Переваривает ненужные предметы,.X.|.XX|XXX,0,0,0,,fixture,0,0,1,0,0,0,0,0,
 burger,Мимик-бургер,Сьешь меня и восстанови здоровье,XX,0,0,25,,reward,0,0,1,0,0,0,0,0,

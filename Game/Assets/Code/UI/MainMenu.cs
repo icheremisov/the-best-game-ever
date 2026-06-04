@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using Mimic.Game;
 
 namespace Mimic.UI
 {
@@ -12,6 +13,7 @@ namespace Mimic.UI
         private void Awake()
         {
             EnsureMainCamera();
+            MusicPlayer.PlayMainTheme();
             FontProvider.ApplyToAllScene();
             if (StartButton != null)
                 StartButton.onClick.AddListener(() => SceneManager.LoadScene("Game"));
