@@ -90,7 +90,7 @@ namespace Mimic.Game
             go.tag = "MainCamera";
             var cam = go.AddComponent<Camera>();
             cam.clearFlags = CameraClearFlags.SolidColor;
-            cam.backgroundColor = new Color(0.08f, 0.06f, 0.10f, 1f);
+            cam.backgroundColor = Color.black; // чёрные полосы-леттербокс по краям фикс. композиции
             cam.orthographic = true;
             cam.cullingMask = 0; // render nothing — Canvas Overlay draws separately
             go.AddComponent<AudioListener>();
