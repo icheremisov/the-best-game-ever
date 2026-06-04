@@ -21,6 +21,8 @@ namespace Mimic.Tests
             Assert.AreEqual("sfx_mouse_click", SfxPlayer.NormalizeGroupId("sfx_mouse_click2"));
             Assert.AreEqual("sfx_mimik_eating", SfxPlayer.NormalizeGroupId("sfx_mimik_eating2"));
             Assert.AreEqual("sfx_mimik_eating", SfxPlayer.NormalizeGroupId("sfx_mimik_eating3"));
+            Assert.AreEqual("sfx_swoosh", SfxPlayer.NormalizeGroupId("sfx_swoosh3"));
+            Assert.AreEqual("sfx_gold", SfxPlayer.NormalizeGroupId("sfx_gold2"));
         }
 
         [Test]
@@ -107,6 +109,14 @@ namespace Mimic.Tests
         public void UnknownDraggableItemHandle_DoesNotRequireDropMapping()
         {
             Assert.DoesNotThrow(() => SfxPlayer.PlayItemHandle(Item("unknown")));
+        }
+
+        [Test]
+        public void SharedInteractionSfx_DoNotThrow()
+        {
+            Assert.DoesNotThrow(SfxPlayer.PlayMimicDamage);
+            Assert.DoesNotThrow(SfxPlayer.PlayGold);
+            Assert.DoesNotThrow(SfxPlayer.PlayRandomMimicEating);
         }
 
         [Test]

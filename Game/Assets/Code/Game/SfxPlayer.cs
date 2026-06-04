@@ -8,6 +8,9 @@ namespace Mimic.Game
     {
         public const string PickupId = "sfx_mouse_click";
         public const string NegativeId = "sfx_UI_negative";
+        public const string MimicDamageId = "sfx_swoosh";
+        public const string GoldId = "sfx_gold";
+        public const string MimicEatingId = "sfx_mimik_eating";
 
         private static readonly string[] DigestCycleIds =
         {
@@ -121,6 +124,12 @@ namespace Mimic.Game
         }
 
         public static void PlayNegative() => Play(NegativeId);
+
+        public static void PlayMimicDamage() => Play(MimicDamageId);
+
+        public static void PlayGold() => Play(GoldId);
+
+        public static void PlayRandomMimicEating() => Play(MimicEatingId);
 
         public static void PlayDigest()
         {

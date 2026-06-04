@@ -76,7 +76,9 @@ namespace Mimic.Game
             yield return new WaitForSeconds(EnemyTurnDelay);
 
             var ctx = GameContext.Instance;
-            ctx.Resources.CurrentHp -= CombatResolver.EnemyAttackDamage(enemy);
+            int damage = CombatResolver.EnemyAttackDamage(enemy);
+            ctx.Resources.CurrentHp -= damage;
+            if (damage > 0) SfxPlayer.PlayMimicDamage();
             ctx.Hud?.Refresh();
             FlashEnemyAttack();
 
@@ -93,6 +95,7 @@ namespace Mimic.Game
         {
             if (!IsActive || !PlayerTurn) return;
             int dmg = Catalogs.DayConfig.Current.BiteDamage;
+            SfxPlayer.PlayRandomMimicEating();
             CombatResolver.ApplyDamageToEnemy(enemy, dmg);
             AfterPlayerAttack();
         }

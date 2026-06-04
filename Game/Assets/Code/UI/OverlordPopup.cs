@@ -61,6 +61,7 @@ namespace Mimic.UI
         private void OnSettleClicked()
         {
             var ctx = GameContext.Instance;
+            SfxPlayer.PlayGold();
             ctx.BankAllInGrid(ctx.AdventurerGrid);
 
             var stolen = TheftResolver.PickStealable(ctx.MimicGrid.Model, v => v, theftSeed++,
@@ -74,7 +75,11 @@ namespace Mimic.UI
 
             var r = ctx.Resources;
             int dmg = Settlement.Damage(r.TotalGold, r.DayQuota, DayConfig.Current.GoldDamageMult);
-            if (dmg > 0) r.CurrentHp -= dmg;
+            if (dmg > 0)
+            {
+                r.CurrentHp -= dmg;
+                SfxPlayer.PlayMimicDamage();
+            }
 
             if (Root != null) Root.SetActive(false);
             onSettled?.Invoke();
