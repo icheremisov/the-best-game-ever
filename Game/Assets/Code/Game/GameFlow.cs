@@ -34,7 +34,7 @@ namespace Mimic.Game
         {
             BeginDay(firstDay: true);
             Hud.NextButton.onClick.AddListener(NextOrEndDay);
-            Hud.SurrenderButton.onClick.AddListener(() => SurrenderPopup.Show(EndBurst));
+            Hud.SurrenderButton.onClick.AddListener(EndBurst); // сразу проигрыш по перееданию, без окна подтверждения
             GameContext.Instance.GameFlowDeathHook = () => EndDeath();
         }
 
