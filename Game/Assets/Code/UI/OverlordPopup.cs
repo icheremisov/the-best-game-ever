@@ -19,6 +19,26 @@ namespace Mimic.UI
         private Action onSettled;
         private int theftSeed = 1;
         private bool showing; // true пока попап вызван через Show — не даём Awake погасить себя
+        private GameObject portrait; // арт Властелина — бюст над панелью, создаётся лениво
+
+        // Бюст Властелина «выглядывает» сверху над панелью попапа.
+        private void EnsurePortrait()
+        {
+            if (portrait != null || Root == null) return;
+            var spr = Resources.Load<Sprite>("Art/UI/overlord");
+            if (spr == null) return;
+            portrait = new GameObject("OverlordPortrait", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            var rt = (RectTransform)portrait.transform;
+            rt.SetParent(Root.transform, worldPositionStays: false);
+            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 1f);
+            rt.pivot = new Vector2(0.5f, 0f); // низ бюста у верхнего края панели — торчит вверх
+            rt.anchoredPosition = new Vector2(0f, -12f);
+            rt.sizeDelta = new Vector2(220f, 300f);
+            var img = portrait.GetComponent<Image>();
+            img.sprite = spr;
+            img.preserveAspect = true;
+            img.raycastTarget = false;
+        }
 
         private void Awake()
         {
@@ -31,6 +51,7 @@ namespace Mimic.UI
             showing = true;
             onSettled = settledCallback;
             if (Root != null) Root.SetActive(true);
+            EnsurePortrait();
             if (TitleText != null) TitleText.text = "Властелин пришёл";
             if (SettleLabel != null) SettleLabel.text = "Подвести итог дня";
             RefreshTexts();

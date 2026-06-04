@@ -118,7 +118,17 @@ namespace Mimic.UI
             bubbleRt.anchoredPosition = new Vector2(0f, 60f);
             bubbleRt.sizeDelta = new Vector2(760f, 220f);
             var bubbleImg = bubbleGo.GetComponent<Image>();
-            bubbleImg.color = new Color(0.97f, 0.96f, 0.92f, 1f);
+            var bubbleSprite = Resources.Load<Sprite>("Art/UI/bubble");
+            if (bubbleSprite != null)
+            {
+                bubbleImg.sprite = bubbleSprite;
+                bubbleImg.type = Image.Type.Simple;
+                bubbleImg.color = Color.white;
+            }
+            else
+            {
+                bubbleImg.color = new Color(0.97f, 0.96f, 0.92f, 1f);
+            }
             bubbleImg.raycastTarget = false;
 
             const float portW = 180f;

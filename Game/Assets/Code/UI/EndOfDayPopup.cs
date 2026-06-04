@@ -19,6 +19,33 @@ namespace Mimic.UI
         private Action primary, secondary, tertiary;
         private bool showing; // true пока попап вызван через Open — не даём Awake погасить себя
         private bool styled;
+        private GameObject artGo; // арт исхода (мимик сдох/лопнул) — бюст над панелью, лениво
+
+        // Показывает арт-картинку исхода над панелью; null/отсутствие ресурса — прячет.
+        private void SetArt(string resPath)
+        {
+            var spr = string.IsNullOrEmpty(resPath) ? null : Resources.Load<Sprite>(resPath);
+            if (spr == null)
+            {
+                if (artGo != null) artGo.SetActive(false);
+                return;
+            }
+            if (artGo == null)
+            {
+                artGo = new GameObject("OutcomeArt", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+                var rt = (RectTransform)artGo.transform;
+                rt.SetParent(TitleText != null ? TitleText.transform.parent : transform, worldPositionStays: false);
+                rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 1f);
+                rt.pivot = new Vector2(0.5f, 0f); // торчит вверх над панелью
+                rt.anchoredPosition = new Vector2(0f, -8f);
+                rt.sizeDelta = new Vector2(300f, 280f);
+                var img = artGo.GetComponent<Image>();
+                img.preserveAspect = true;
+                img.raycastTarget = false;
+            }
+            artGo.GetComponent<Image>().sprite = spr;
+            artGo.SetActive(true);
+        }
 
         private void Awake()
         {
@@ -96,6 +123,7 @@ namespace Mimic.UI
         {
             showing = true;
             ApplyStyle();
+            SetArt(null); // по умолчанию без арта; конкретный исход включит свой
             if (TitleText != null) TitleText.text = title;
             if (SubtitleText != null) SubtitleText.text = subtitle;
             gameObject.SetActive(true);
@@ -131,6 +159,7 @@ namespace Mimic.UI
         {
             Open("Здоровье на нуле",
                  "Большинство мимиков всю жизнь проводят незамеченными. О них не сложат легенд. А о тебе... может быть?");
+            SetArt("Art/UI/mimic_dead_hard"); // разнесли в бою / от гадости
             Bind(PrimaryButton, PrimaryLabel, "Переиграть день", onRetryDay, ref primary, true);
             Bind(SecondaryButton, SecondaryLabel, "В меню", ToMenu, ref secondary, true);
             Bind(TertiaryButton, TertiaryLabel, "", null, ref tertiary, false);
@@ -140,6 +169,7 @@ namespace Mimic.UI
         {
             Open("Ты лопнул от переедания",
                  "46% мимиков не доживают до старости из-за переедания. Вот кто ты есть: мимик обыкновенный.");
+            SetArt("Art/UI/mimic_dead"); // лопнул от переедания / не поместилось
             Bind(PrimaryButton, PrimaryLabel, "Переиграть день", onRetryDay, ref primary, true);
             Bind(SecondaryButton, SecondaryLabel, "В меню", ToMenu, ref secondary, true);
             Bind(TertiaryButton, TertiaryLabel, "", null, ref tertiary, false);
