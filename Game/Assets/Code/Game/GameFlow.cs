@@ -224,6 +224,14 @@ namespace Mimic.Game
                 return;
             }
 
+            // Накопил на выкуп — автоматически засчитываем победу (раньше была кнопка «Выкупить себя»).
+            if (r.TotalGold >= DayConfig.Current.RansomGold)
+            {
+                dayEnded = true;
+                EndPopup.ShowRansomWin();
+                return;
+            }
+
             bool win = r.TotalGold >= r.DayQuota;
             SpawnRewardItem(win);
             EnterRewardButtons();

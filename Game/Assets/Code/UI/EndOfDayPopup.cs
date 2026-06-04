@@ -121,15 +121,6 @@ namespace Mimic.UI
             gameObject.SetActive(true);
         }
 
-        public void ShowTransition(bool hasNextDay, bool canRansom,
-            Action onNextDay, Action onRansom, Action onChallenge)
-        {
-            Open("День завершён", "Что дальше?");
-            Bind(PrimaryButton, PrimaryLabel, "Следующий день", onNextDay, ref primary, hasNextDay);
-            Bind(SecondaryButton, SecondaryLabel, "Выкупить себя", onRansom, ref secondary, canRansom);
-            Bind(TertiaryButton, TertiaryLabel, "Бросить вызов (КУСЬ)", onChallenge, ref tertiary, true);
-        }
-
         public void ShowRansomWin()
         {
             Open("Свободный мимик",
