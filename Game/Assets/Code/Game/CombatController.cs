@@ -64,8 +64,12 @@ namespace Mimic.Game
             if (ctx.Hud != null)
             {
                 if (ctx.Hud.NextButton != null) ctx.Hud.NextButton.gameObject.SetActive(false);
-                if (ctx.Hud.SurrenderButton != null) ctx.Hud.SurrenderButton.gameObject.SetActive(false);
+                // SurrenderButton не прячем — только гасим клик (видна, но неактивна в бою).
+                if (ctx.Hud.SurrenderButton != null) ctx.Hud.SurrenderButton.interactable = false;
             }
+
+            // В бою вместо банки показываем портрет героя/врага.
+            if (JarHeadView.Instance != null) JarHeadView.Instance.ShowCombatPortrait(enemy.Name);
 
             // Игрок ходит первым — ждём его атаку (PlayerTurn уже true).
         }
@@ -144,9 +148,11 @@ namespace Mimic.Game
             if (ctx.Hud != null)
             {
                 if (ctx.Hud.NextButton != null) ctx.Hud.NextButton.gameObject.SetActive(true);
-                if (ctx.Hud.SurrenderButton != null) ctx.Hud.SurrenderButton.gameObject.SetActive(true);
+                if (ctx.Hud.SurrenderButton != null) ctx.Hud.SurrenderButton.interactable = true;
             }
             if (ctx.AdventurerGrid != null) ctx.AdventurerGrid.gameObject.SetActive(true);
+            // Вернуть банку на место (портрет боя убрать).
+            if (JarHeadView.Instance != null) JarHeadView.Instance.Restore();
 
             var cb = win ? onWin : onLose;
             onWin = onLose = null;

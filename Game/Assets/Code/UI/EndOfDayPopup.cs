@@ -16,35 +16,27 @@ namespace Mimic.UI
         public Button TertiaryButton;
         public Text TertiaryLabel;
 
+        [Header("Outcome art (holder в префабе — позицию/размер правим в редакторе)")]
+        public Image OutcomeArt; // картинка исхода: победа/смерть/лопнул. Позиция — в префабе.
+
         private Action primary, secondary, tertiary;
         private bool showing; // true пока попап вызван через Open — не даём Awake погасить себя
         private bool styled;
-        private GameObject artGo; // арт исхода (мимик сдох/лопнул) — бюст над панелью, лениво
 
-        // Показывает арт-картинку исхода над панелью; null/отсутствие ресурса — прячет.
+        // Заполняет holder OutcomeArt спрайтом по пути в Resources; null/нет ресурса — прячет.
+        // Позицию/размер не трогаем — они заданы в префабе.
         private void SetArt(string resPath)
         {
+            if (OutcomeArt == null) return;
             var spr = string.IsNullOrEmpty(resPath) ? null : Resources.Load<Sprite>(resPath);
             if (spr == null)
             {
-                if (artGo != null) artGo.SetActive(false);
+                OutcomeArt.gameObject.SetActive(false);
                 return;
             }
-            if (artGo == null)
-            {
-                artGo = new GameObject("OutcomeArt", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
-                var rt = (RectTransform)artGo.transform;
-                rt.SetParent(TitleText != null ? TitleText.transform.parent : transform, worldPositionStays: false);
-                rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 1f);
-                rt.pivot = new Vector2(0.5f, 0f); // торчит вверх над панелью
-                rt.anchoredPosition = new Vector2(0f, -8f);
-                rt.sizeDelta = new Vector2(300f, 280f);
-                var img = artGo.GetComponent<Image>();
-                img.preserveAspect = true;
-                img.raycastTarget = false;
-            }
-            artGo.GetComponent<Image>().sprite = spr;
-            artGo.SetActive(true);
+            OutcomeArt.sprite = spr;
+            OutcomeArt.preserveAspect = true;
+            OutcomeArt.gameObject.SetActive(true);
         }
 
         private void Awake()
@@ -142,6 +134,7 @@ namespace Mimic.UI
         {
             Open("Свободный мимик",
                  "Поздравляю! Ты стал свободным мимиком. Ты нашёл... счастье?");
+            SetArt("Art/UI/mimic_free"); // сундук-победюк — арт свободного мимика
             Bind(PrimaryButton, PrimaryLabel, "В меню", ToMenu, ref primary, true);
             Bind(SecondaryButton, SecondaryLabel, "", null, ref secondary, false);
             Bind(TertiaryButton, TertiaryLabel, "", null, ref tertiary, false);

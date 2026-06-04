@@ -1,10 +1,7 @@
 fileFormatVersion: 2
-guid: bff7c52fb0d204d3bad73595e428095b
+guid: 372ad4617b5a46288598bb7fc6100859
 TextureImporter:
-  internalIDToNameTable:
-  - first:
-      213: 4659626946542578027
-    second: magic_staff_0
+  internalIDToNameTable: []
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -137,29 +134,7 @@ TextureImporter:
     forceMaximumCompressionQuality_BC6H_BC7: 0
   spriteSheet:
     serializedVersion: 2
-    sprites:
-    - serializedVersion: 2
-      name: magic_staff_0
-      rect:
-        serializedVersion: 2
-        x: 5
-        y: 5
-        width: 47
-        height: 185
-      alignment: 0
-      pivot: {x: 0, y: 0}
-      border: {x: 0, y: 0, z: 0, w: 0}
-      customData: 
-      outline: []
-      physicsShape: []
-      tessellationDetail: -1
-      bones: []
-      spriteID: b69228625025aa040800000000000000
-      internalID: 4659626946542578027
-      vertices: []
-      indices: 
-      edges: []
-      weights: []
+    sprites: []
     outline: []
     customData: 
     physicsShape: []
@@ -173,8 +148,7 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable:
-      magic_staff_0: 4659626946542578027
+    nameFileIdTable: {}
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

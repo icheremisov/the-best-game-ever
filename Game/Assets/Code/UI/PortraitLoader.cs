@@ -4,30 +4,49 @@ using UnityEngine.UI;
 
 namespace Mimic.UI
 {
-    // Общий загрузчик префабов-портретов персонажей (приключенцы, master, mimic).
-    // Сначала ищет Art/Portraits/{id}, затем Art/Adventurers/{id} (реюз существующих артов).
+    // Общий загрузчик портретов персонажей (приключенцы по ИМЕНИ, master, mimic).
+    // Ищет в Art/Portraits, Art/Adventurers, Art/UI. Имя героя/диалог-иконка
+    // приводятся к латинскому ключу через alias (см. Resolve).
     public static class PortraitLoader
     {
         private static readonly Dictionary<string, GameObject> cache = new();
         private static readonly Dictionary<string, Sprite> spriteCache = new();
 
+        // Имя приключенца / иконка диалога -> ключ арт-файла.
+        private static readonly Dictionary<string, string> alias = new()
+        {
+            { "Воин", "warrior" },
+            { "Плут", "rogue" },
+            { "Маг", "mage" },
+            { "Властелин", "overlord" },
+            { "master", "overlord" },
+        };
+
+        // Приводит имя героя / иконку к ключу арта (если есть в alias), иначе возвращает как есть.
+        public static string Resolve(string key)
+            => !string.IsNullOrEmpty(key) && alias.TryGetValue(key, out var v) ? v : key;
+
         public static GameObject LoadPrefab(string id)
         {
+            id = Resolve(id);
             if (string.IsNullOrEmpty(id)) return null;
             if (cache.TryGetValue(id, out var p)) return p;
             p = Resources.Load<GameObject>("Art/Portraits/" + id)
-                ?? Resources.Load<GameObject>("Art/Adventurers/" + id);
+                ?? Resources.Load<GameObject>("Art/Adventurers/" + id)
+                ?? Resources.Load<GameObject>("Art/UI/" + id);
             cache[id] = p;
             return p;
         }
 
-        // Спрайт-портрет по id (художник может класть просто png вместо префаба).
+        // Спрайт-портрет по ключу (художник может класть просто png вместо префаба).
         public static Sprite LoadSprite(string id)
         {
+            id = Resolve(id);
             if (string.IsNullOrEmpty(id)) return null;
             if (spriteCache.TryGetValue(id, out var s)) return s;
             s = Resources.Load<Sprite>("Art/Portraits/" + id)
-                ?? Resources.Load<Sprite>("Art/Adventurers/" + id);
+                ?? Resources.Load<Sprite>("Art/Adventurers/" + id)
+                ?? Resources.Load<Sprite>("Art/UI/" + id);
             spriteCache[id] = s;
             return s;
         }

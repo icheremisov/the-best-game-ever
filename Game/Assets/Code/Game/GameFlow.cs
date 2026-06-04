@@ -245,14 +245,20 @@ namespace Mimic.Game
             ctx.OnGridChanged();
         }
 
-        // Две кнопки на месте «Следующий»: «Начать следующий день» (нет в последний день)
-        // и «Бросить вызов».
+        // Две кнопки на месте «Следующий»: «Начать следующий день» (только когда лут
+        // авантюриста пуст и это не последний день) и «Бросить вызов».
         private void EnterRewardButtons()
         {
             Hud.ShowRewardButtons(
                 onNextDay: GoNextDay,
-                nextDayEnabled: !DayConfig.IsLastDay,
+                nextDayEnabled: AdventurerGridEmpty() && !DayConfig.IsLastDay,
                 onChallenge: OnChallengeOverlord);
+        }
+
+        private static bool AdventurerGridEmpty()
+        {
+            var grid = GameContext.Instance.AdventurerGrid;
+            return grid.Model.FreeCellsCount == grid.Width * grid.Height;
         }
 
         private void GoNextDay()
@@ -297,9 +303,13 @@ namespace Mimic.Game
         private void Update()
         {
             var ctx = GameContext.Instance;
-            if (ctx == null || Hud == null || Phase != DayPhase.Adventurers) return;
+            if (ctx == null || Hud == null) return;
             bool advEmpty = ctx.AdventurerGrid.Model.FreeCellsCount == ctx.AdventurerGrid.Width * ctx.AdventurerGrid.Height;
-            Hud.SetNextButtonEnabled(advEmpty);
+            if (Phase == DayPhase.Adventurers)
+                Hud.SetNextButtonEnabled(advEmpty);
+            else if (Phase == DayPhase.Reward)
+                // «Начать следующий день» — только когда выданный лут перетащен/переварен.
+                Hud.SetStartNextDayEnabled(advEmpty && !DayConfig.IsLastDay);
         }
     }
 }

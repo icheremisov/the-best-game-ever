@@ -89,6 +89,40 @@ namespace Mimic.UI
                 return;
             }
 
+            // Предпочитаем настраиваемый префаб (Resources/UI/DialogOverlay); если его нет — строим в коде.
+            var prefab = Resources.Load<GameObject>("UI/DialogOverlay");
+            if (prefab != null && BuildFromPrefab(prefab)) return;
+
+            BuildInCode();
+        }
+
+        // Инстанцирует префаб диалога и берёт ссылки из DialogOverlayView.
+        private bool BuildFromPrefab(GameObject prefab)
+        {
+            var inst = Instantiate(prefab, UiStageRoot.For(hostCanvas), false);
+            inst.name = "DialogOverlay_Auto";
+            var view = inst.GetComponent<DialogOverlayView>();
+            if (view == null || view.Root == null)
+            {
+                Debug.LogWarning("[DialogOverlay] В префабе нет DialogOverlayView/Root — фолбэк на код-билд");
+                Destroy(inst);
+                return false;
+            }
+            var rt = (RectTransform)inst.transform;
+            rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one;
+            rt.offsetMin = Vector2.zero; rt.offsetMax = Vector2.zero;
+
+            root = inst;
+            portraitContainer = view.PortraitContainer;
+            portraitFallback = view.PortraitFallback;
+            bodyText = view.BodyText;
+            view.Root.onClick.AddListener(Advance);
+            inst.transform.SetAsLastSibling();
+            return true;
+        }
+
+        private void BuildInCode()
+        {
             // Затемняющая панель на весь экран; Button глотает клики и листает диалог.
             var panelGo = new GameObject("DialogOverlay_Auto",
                 typeof(RectTransform), typeof(CanvasRenderer), typeof(Image), typeof(Button));

@@ -32,13 +32,11 @@ namespace Mimic.UI
         private Image healthProgress;
         private Image acidProgress;
 
-        // --- Кнопки/лейбл шага «итоги дня», создаются в рантайме (клон NextButton). ---
-        private Text goldCollectedLabel;       // «Собрано X / Y» слева от кнопки «Подвести итоги»
-        private Button startNextDayButton;     // «Начать следующий день»
-        private Text startNextDayLabel;
-        private Button challengeButton;        // «Бросить вызов»
-        private Text challengeLabel;
-        private bool rewardUiBuilt;
+        // --- Holder-ы шага «итоги дня» (объекты в сцене, позиции правим в редакторе). ---
+        [Header("Reward step holders (объекты в сцене)")]
+        public Text GoldCollectedLabel;     // «Собрано золота X / Y» слева от кнопки «Подвести итоги»
+        public Button StartNextDayButton;   // «Начать следующий день»
+        public Button ChallengeButton;      // «Бросить вызов»
 
         private static readonly Color GoldOkColor = new Color(0.55f, 0.9f, 0.55f);
         private static readonly Color GoldShortColor = new Color(0.95f, 0.85f, 0.55f);
@@ -49,109 +47,38 @@ namespace Mimic.UI
             EnsureBarLabels();
             EnsureButtonLabels();
             CacheProgressBars();
-            EnsureRewardUi();
-        }
-
-        // Строит «Собрано X / Y» и две кнопки шага итогов (клон NextButton), один раз.
-        private void EnsureRewardUi()
-        {
-            if (rewardUiBuilt || NextButton == null) return;
-            rewardUiBuilt = true;
-
-            var srt = (RectTransform)NextButton.transform;
-            float baseX = srt.anchoredPosition.x;
-            float baseY = srt.anchoredPosition.y;
-            float h = srt.sizeDelta.y;
-
-            // «Начать следующий день» — на месте NextButton; «Бросить вызов» — над ней.
-            startNextDayButton = CloneNextButton("StartNextDayButton", baseY, "Начать\nследующий день", out startNextDayLabel);
-            challengeButton = CloneNextButton("ChallengeButton", baseY + h + 10f, "Бросить вызов", out challengeLabel);
-            startNextDayButton.gameObject.SetActive(false);
-            challengeButton.gameObject.SetActive(false);
-
-            EnsureGoldLabel(baseX - srt.sizeDelta.x * 0.5f - 24f, baseY);
-        }
-
-        // Клонирует NextButton (тот же спрайт/размер/якоря), смещает по Y, ставит текст.
-        private Button CloneNextButton(string name, float anchoredY, string label, out Text labelText)
-        {
-            var src = NextButton.gameObject;
-            var go = Instantiate(src, src.transform.parent);
-            go.name = name;
-            var srt = (RectTransform)src.transform;
-            var rt = (RectTransform)go.transform;
-            rt.anchorMin = srt.anchorMin;
-            rt.anchorMax = srt.anchorMax;
-            rt.pivot = srt.pivot;
-            rt.sizeDelta = srt.sizeDelta;
-            rt.anchoredPosition = new Vector2(srt.anchoredPosition.x, anchoredY);
-
-            var btn = go.GetComponent<Button>();
-            btn.onClick.RemoveAllListeners();
-            btn.interactable = true;
-
-            labelText = go.GetComponentInChildren<Text>(true);
-            if (labelText != null)
-            {
-                labelText.text = label;
-                labelText.font = FontProvider.Default;
-                labelText.color = Color.white;
-                labelText.alignment = TextAnchor.MiddleCenter;
-            }
-            return btn;
-        }
-
-        // Лейбл «Собрано X / Y» справа-выровнен, правый край в (rightX, y).
-        private void EnsureGoldLabel(float rightX, float y)
-        {
-            var go = new GameObject("GoldCollected", typeof(RectTransform), typeof(CanvasRenderer), typeof(Text));
-            var rt = go.GetComponent<RectTransform>();
-            rt.SetParent(NextButton.transform.parent, worldPositionStays: false);
-            rt.anchorMin = rt.anchorMax = new Vector2(0f, 1f);
-            rt.pivot = new Vector2(1f, 0.5f);
-            rt.sizeDelta = new Vector2(360f, 116f);
-            rt.anchoredPosition = new Vector2(rightX, y);
-
-            goldCollectedLabel = go.GetComponent<Text>();
-            goldCollectedLabel.font = FontProvider.Default;
-            goldCollectedLabel.fontSize = 32;
-            goldCollectedLabel.fontStyle = FontStyle.Bold;
-            goldCollectedLabel.alignment = TextAnchor.MiddleRight;
-            goldCollectedLabel.color = Color.white;
-            goldCollectedLabel.raycastTarget = false;
-            goldCollectedLabel.horizontalOverflow = HorizontalWrapMode.Overflow;
-            goldCollectedLabel.verticalOverflow = VerticalWrapMode.Overflow;
-            var outline = go.AddComponent<Outline>();
-            outline.effectColor = Color.black;
-            outline.effectDistance = new Vector2(2, -2);
         }
 
         // Шаг сбора лута: видна NextButton («Следующий!»/«Подвести итоги дня»), кнопки итогов скрыты.
         public void EnterAdventurerButtons()
         {
-            EnsureRewardUi();
             if (NextButton != null) NextButton.gameObject.SetActive(true);
-            if (startNextDayButton != null) startNextDayButton.gameObject.SetActive(false);
-            if (challengeButton != null) challengeButton.gameObject.SetActive(false);
+            if (StartNextDayButton != null) StartNextDayButton.gameObject.SetActive(false);
+            if (ChallengeButton != null) ChallengeButton.gameObject.SetActive(false);
+        }
+
+        // Доступность «Начать следующий день» (живо обновляется, пока лут авантюриста не пуст).
+        public void SetStartNextDayEnabled(bool e)
+        {
+            if (StartNextDayButton != null) StartNextDayButton.interactable = e;
         }
 
         // Шаг награды: NextButton скрыта, на её месте «Начать следующий день» и «Бросить вызов».
         public void ShowRewardButtons(System.Action onNextDay, bool nextDayEnabled, System.Action onChallenge)
         {
-            EnsureRewardUi();
             if (NextButton != null) NextButton.gameObject.SetActive(false);
-            if (startNextDayButton != null)
+            if (StartNextDayButton != null)
             {
-                startNextDayButton.gameObject.SetActive(true);
-                startNextDayButton.interactable = nextDayEnabled;
-                startNextDayButton.onClick.RemoveAllListeners();
-                startNextDayButton.onClick.AddListener(() => onNextDay?.Invoke());
+                StartNextDayButton.gameObject.SetActive(true);
+                StartNextDayButton.interactable = nextDayEnabled;
+                StartNextDayButton.onClick.RemoveAllListeners();
+                StartNextDayButton.onClick.AddListener(() => onNextDay?.Invoke());
             }
-            if (challengeButton != null)
+            if (ChallengeButton != null)
             {
-                challengeButton.gameObject.SetActive(true);
-                challengeButton.onClick.RemoveAllListeners();
-                challengeButton.onClick.AddListener(() => onChallenge?.Invoke());
+                ChallengeButton.gameObject.SetActive(true);
+                ChallengeButton.onClick.RemoveAllListeners();
+                ChallengeButton.onClick.AddListener(() => onChallenge?.Invoke());
             }
         }
 
@@ -255,12 +182,12 @@ namespace Mimic.UI
             if (healthBarLabel != null) healthBarLabel.text = $"HP: {ctx.Resources.CurrentHp}/{hpMax}";
             if (acidBarLabel != null) acidBarLabel.text = $"ЖС: {ctx.Resources.CurrentAcid}/{acidMax}";
 
-            if (goldCollectedLabel != null)
+            if (GoldCollectedLabel != null)
             {
                 int collected = ctx.Resources.TotalGold;
                 int quota = ctx.Resources.DayQuota;
-                goldCollectedLabel.text = $"Собрано золота\n{collected} / {quota}";
-                goldCollectedLabel.color = collected >= quota ? GoldOkColor : GoldShortColor;
+                GoldCollectedLabel.text = $"Собрано золота\n{collected} / {quota}";
+                GoldCollectedLabel.color = collected >= quota ? GoldOkColor : GoldShortColor;
             }
 
             UpdateSurrenderHighlight(ctx);

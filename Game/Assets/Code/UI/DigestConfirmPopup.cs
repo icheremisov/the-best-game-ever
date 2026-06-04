@@ -5,8 +5,9 @@ using Mimic.Game;
 
 namespace Mimic.UI
 {
-    // Модальное окно подтверждения переваривания. Строится в рантайме (без правок сцены),
-    // как и зона переваривания в DragController. Singleton, авто-добавляется GameContext.
+    // Модальное окно подтверждения переваривания. Предпочитает настраиваемый префаб
+    // (Resources/UI/DigestConfirmPopup); если префаба нет — строит UI в коде (фолбэк).
+    // Singleton, авто-добавляется GameContext.
     public class DigestConfirmPopup : MonoBehaviour
     {
         public static DigestConfirmPopup Instance { get; private set; }
@@ -113,6 +114,47 @@ namespace Mimic.UI
             var canvas = FindCanvas();
             if (canvas == null) { Debug.LogError("[DigestConfirmPopup] Canvas не найден"); return; }
 
+            // Предпочитаем настраиваемый префаб; если его нет — строим в коде.
+            var prefab = Resources.Load<GameObject>("UI/DigestConfirmPopup");
+            if (prefab != null && BuildFromPrefab(prefab, canvas)) return;
+
+            BuildInCode(canvas);
+        }
+
+        // Инстанцирует префаб окна и берёт ссылки из DigestConfirmPopupView.
+        private bool BuildFromPrefab(GameObject prefab, Canvas canvas)
+        {
+            var inst = Instantiate(prefab, UiStageRoot.For(canvas), false);
+            inst.name = "DigestConfirmPopup_Auto";
+            var view = inst.GetComponent<DigestConfirmPopupView>();
+            if (view == null || view.ConfirmButton == null || view.CancelButton == null)
+            {
+                Debug.LogWarning("[DigestConfirmPopup] В префабе нет DigestConfirmPopupView/кнопок — фолбэк на код-билд");
+                Destroy(inst);
+                return false;
+            }
+
+            var rt = (RectTransform)inst.transform;
+            Stretch(rt);
+
+            root = inst;
+            artImage = view.ArtImage;
+            artFallback = view.ArtFallback;
+            goldText = view.GoldText;
+            healText = view.HealText;
+            acidText = view.AcidText;
+            confirmButton = view.ConfirmButton;
+            confirmLabel = view.ConfirmLabel;
+
+            confirmButton.onClick.AddListener(Confirm);
+            view.CancelButton.onClick.AddListener(Cancel);
+
+            root.SetActive(false);
+            return true;
+        }
+
+        private void BuildInCode(Canvas canvas)
+        {
             // Затемнение на весь экран — блокирует клики по игре.
             root = NewUI("DigestConfirmPopup", UiStageRoot.For(canvas));
             var dim = root.AddComponent<Image>();

@@ -41,7 +41,7 @@ namespace Mimic.UI
             onEat = onEatCallback;
             if (EatButton != null)
                 PopupHelpers.EnsureButtonLabel(EatButton, eatLabel, 28);
-            ShowPortrait(data.Id);
+            ShowPortrait(data.Name);
 
             // Блокер перехватывает все клики мимо панели — иначе они проходят сквозь
             // попап на кнопку «Следующий» в HUD под ним.
